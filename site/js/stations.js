@@ -593,5 +593,9 @@ const StationPopup = (() => {
       .openOn(map);
   }
 
-  return { open, summary, invalidate, openOverflow, overflowSummary };
+  return {
+    open, summary, invalidate, openOverflow, overflowSummary,
+    // The chart arithmetic, for tests/js.
+    _internals: { niceTicks, niceScale, levelAxis, timeTicks, tickLabel, rainBuckets, fmtValue, fmtFlow },
+  };
 })();

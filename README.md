@@ -126,6 +126,10 @@ The Tamar works differently, because its centreline is the boundary. The area qu
 
 Railway ways are classified by line name, then by `usage` tag. Heritage and tourist railways are left off the map, as are yards, sidings and crossovers.
 
+## Tests
+
+`make test` runs both test suites, which use only Python's `unittest` and Node's built-in test runner, so there's nothing to install beyond Python 3.10 or later and Node 22 or later. The Python tests cover the poller, the spill log, flood warnings, forecasts, geometry and the server's endpoints and headers; each runs against a temporary database, with the Environment Agency, South West Water, Open-Meteo and NRFA replaced by fixed responses, so they need no network. The JavaScript tests load the page's scripts into a sandbox and check the chart arithmetic, the escaping and the tooltip text. GitHub Actions runs `make test` on every push to `main` and every pull request, on Python 3.10 and 3.13.
+
 ## Project layout
 
 ```
@@ -148,6 +152,8 @@ site/js/stations.js       station and overflow popups and their charts
 site/js/floods.js         the flood warning banner and header indicator
 site/js/app.js            tab routing and the status line
 site/js/utils.js          escaping, formatting and the theme toggle
+tests/                    Python tests (unittest), one file per module
+tests/js/                 JavaScript tests (node --test)
 ```
 
 ## Contributing

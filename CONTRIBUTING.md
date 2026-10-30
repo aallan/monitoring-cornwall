@@ -10,7 +10,7 @@ Missing or misplaced rivers, railways and stations usually come from OpenStreetM
 
 ## Setting up
 
-You'll need Python 3.10 or later, `make`, `curl` and `shasum`. There are no packages to install.
+You'll need Python 3.10 or later, `make`, `curl` and `shasum`, and Node 22 or later to run the JavaScript tests. There are no packages to install.
 
 ```bash
 git clone https://github.com/aallan/monitoring-cornwall.git
@@ -32,9 +32,10 @@ Then open [http://localhost:8090](http://localhost:8090). The first poll for liv
    - Anything from the data or the user goes through `esc()` before it reaches `innerHTML`.
    - Event handlers are attached with `addEventListener`. The Content Security Policy blocks inline handlers such as `onclick=`.
    - Copy and comments are in British English.
-3. Check the change in a browser at desktop and phone widths, in light and dark mode. If it touches `scripts/fetch_geodata.py`, run `make data` and look at the result on the map.
-4. When a change alters a JavaScript or CSS file, bump its `?v=` query string in `site/index.html`, so browsers fetch the new version.
-5. Open a pull request against `main` that says what changed and why.
+3. Run `make test`, and add a test for anything you fix or add in `monitor/`, `serve.py` or the chart code in `site/js/stations.js`. Tests stay offline, with fixed responses in place of network calls, as the existing tests do.
+4. Check the change in a browser at desktop and phone widths, in light and dark mode. If it touches `scripts/fetch_geodata.py`, run `make data` and look at the result on the map.
+5. When a change alters a JavaScript or CSS file, bump its `?v=` query string in `site/index.html`, so browsers fetch the new version.
+6. Open a pull request against `main` that says what changed and why.
 
 ## What not to send
 

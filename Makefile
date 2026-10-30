@@ -3,13 +3,14 @@ PYTHON  := $(shell which python3)
 PORT    := 8090
 LEAFLET := 1.9.4
 
-.PHONY: help libs data poll serve clean
+.PHONY: help libs data poll serve test test-py test-js clean
 
 help:
 	@echo "make libs    download Leaflet $(LEAFLET) into site/lib and verify it"
 	@echo "make data    build the map overlays in site/data from OpenStreetMap"
 	@echo "make poll    fetch the latest Environment Agency readings once"
-	@echo "make serve   run the server, which also polls every 15 minutes"
+	@echo "make serve   run the server, which also polls every 5 minutes"
+	@echo "make test    run the Python and JavaScript tests (needs Node 22 or later)"
 	@echo "make clean   remove downloaded libraries, overlays and the download cache"
 	@echo "             (the readings database in data/ is kept)"
 
@@ -29,6 +30,14 @@ poll:
 
 serve:
 	$(PYTHON) serve.py $(PORT)
+
+test: test-py test-js
+
+test-py:
+	$(PYTHON) -m unittest discover -s tests -t .
+
+test-js:
+	node --test 'tests/js/*.test.mjs'
 
 clean:
 	rm -rf site/lib site/data .cache data/places.json
