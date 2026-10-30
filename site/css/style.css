@@ -323,7 +323,9 @@ body.map-mode footer { display: none; }
 .legend-body {
     border-top: 1px solid var(--border); padding-top: 0.15rem; min-height: 0;
     overflow-y: auto; overscroll-behavior: contain;
-    display: grid; grid-template-columns: minmax(175px, auto) minmax(150px, auto); column-gap: 1.1rem;
+    /* Equal shares: in a legend that sizes to its content, each column takes
+       the width the wider one needs, so the two match. */
+    display: grid; grid-template-columns: 1fr 1fr; column-gap: 1.25rem;
 }
 .legend-col { min-width: 0; }
 .legend-title {
@@ -383,7 +385,7 @@ footer { width: 100%; padding: 0 2rem 1.5rem; }
     main { padding-top: 1rem; }
     .map-box { min-height: 70vh; }
     .map-legend { font-size: 0.75rem; }
-    .legend-body { grid-template-columns: minmax(175px, auto); }
+    .legend-body { grid-template-columns: 1fr; }
     /* The credits wrap to two lines across a phone's width; keep the legend above them */
     .leaflet-bottom.leaflet-left .leaflet-control { margin-bottom: 36px; }
     .data-table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
