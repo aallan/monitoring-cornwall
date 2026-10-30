@@ -2,7 +2,7 @@
 
 ![Monitoring Cornwall: the map of Cornwall with its river gauges, rain gauges, storm overflows, bathing waters and buoys, the layers legend open, and the Seven Stones lightvessel's popup charting a week of wave height](docs/screenshot.webp)
 
-Monitoring Cornwall shows which of the county's rivers are high and rising, which storm overflows are spilling, how clean the water is at each beach, and what the rain and the rivers are forecast to do next. It brings the Environment Agency's gauges, flood warnings and bathing waters, South West Water's storm overflow monitors, Met Office observations at sea and Open-Meteo's forecasts together on one map of Cornwall, drawn from [OpenStreetMap](https://www.openstreetmap.org/). It's a companion to [Floodwatch](https://github.com/aallan/floodwatch), which monitors the River Taw catchment in Devon at [tawriver.watch](https://tawriver.watch).
+Monitoring Cornwall shows which of the county's rivers are high and rising, which storm overflows are spilling, how clean the water is at each beach, and what the rain, the rivers and the sea are doing now and are forecast to do next. It brings the Environment Agency's gauges, flood warnings and bathing waters, South West Water's storm overflow monitors, the Regional Coastal Monitoring Programme's wave buoys and coastal weather stations, the Met Office's observations at sea, and Open-Meteo's forecasts together on one map of Cornwall, drawn from [OpenStreetMap](https://www.openstreetmap.org/). It runs at [cornwall.watch](https://cornwall.watch), a companion to [Floodwatch](https://github.com/aallan/floodwatch), which monitors the River Taw catchment in Devon at [tawriver.watch](https://tawriver.watch).
 
 The site is a single page with no framework and no build step. The server, the readings poller and the map data pipeline use only the Python standard library, with readings kept in SQLite.
 
@@ -55,7 +55,24 @@ The rest of the map comes from OpenStreetMap.
 | Stations | `railway=station` and `railway=halt` | National Rail stations, each with its CRS code |
 | Major roads | `highway=trunk`, `primary` or `motorway` with a one- or two-digit A-road `ref` | The A30, A38 and A39, labelled with their numbers. Slip roads are left out |
 
-Every layer is on when the page opens, apart from the storm overflows that aren't spilling now. Hovering over a river, line, road or station shows its name. Each row in the legend switches its layer on and off, and each section heading (Flood warnings, Live readings, Storm overflows, Waterways, Railways, Roads) switches the whole section. A layer that's off is dimmed and struck through. The page follows the system's light or dark setting, with a toggle to override it.
+Every layer is on when the page opens, apart from the storm overflows that aren't spilling now. Hovering over a river, line, road or station shows its name. Each row in the legend switches its layer on and off, and each section heading (Flood warnings, Live readings, Storm overflows, Coast, Waterways, Railways, Roads) switches the whole section. A layer that's off is dimmed and struck through. The page follows the system's light or dark setting, with a toggle to override it.
+
+## Data sources
+
+| Data | Source | Read | Licence |
+|---|---|---|---|
+| Flood warnings and alerts, and their areas | Environment Agency [real-time flood-monitoring API](https://environment.data.gov.uk/flood-monitoring/doc/reference) | Every 5 minutes | [Open Government Licence](https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/) |
+| River, tidal and rain gauges | Environment Agency real-time flood-monitoring API | Every 5 minutes | Open Government Licence |
+| Storm overflows | South West Water's [storm overflow activity feed](https://www.arcgis.com/home/item.html?id=cabfce76b72a4a278a33d737c0708d42) | Every 5 minutes | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) |
+| Storm overflow yearly totals, names and types | Event Duration Monitoring [annual returns](https://www.arcgis.com/home/item.html?id=66fef44a4aab438991d7ce08fbc1de64) | Daily | Open Government Licence |
+| Bathing waters | Environment Agency [bathing water quality data](https://environment.data.gov.uk/bwq/profiles/) | Hourly, and samples when a popup opens | Open Government Licence |
+| Wave buoys and coastal weather stations | Regional Coastal Monitoring Programme, through the Channel Coastal Observatory's [API](https://coastalmonitoring.org/ccoresources/api/) | Every 30 minutes | Open Government Licence |
+| Offshore weather stations | Met Office observations from Seven Stones and E1, republished by NOAA's [National Data Buoy Center](https://www.ndbc.noaa.gov/) | Every 30 minutes | [NOAA terms](https://www.weather.gov/disclaimer) |
+| Rain forecast | [Open-Meteo](https://open-meteo.com/) weather forecast API | When a popup opens, kept 15 minutes | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) |
+| River flow forecast | GloFAS, from the Copernicus Emergency Management Service, through Open-Meteo's [flood API](https://open-meteo.com/en/docs/flood-api) | When a popup opens, kept an hour | CC BY 4.0 |
+| Mean river flows | UK [National River Flow Archive](https://nrfa.ceh.ac.uk/) | When needed, kept a week | [NRFA terms](https://nrfa.ceh.ac.uk/help/costs-terms-and-conditions) |
+| Boundary, rivers, streams, railways, stations, roads, and the place names that rain gauges are named after | [OpenStreetMap](https://www.openstreetmap.org/), through the Overpass API | Weekly | [ODbL](https://www.openstreetmap.org/copyright) |
+| Basemap | Esri World Light Gray and Dark Gray Canvas | Loaded by the page | [Esri terms](https://www.esri.com/en-us/legal/terms/full-master-agreement) |
 
 ## Running it
 
@@ -69,7 +86,7 @@ make data     # build the overlays in site/data
 make serve    # serve the site at http://localhost:8090, polling for readings
 ```
 
-The server's first poll lists the stations, then fetches 28 days of history for each of them, four at a time, which takes a few minutes; markers appear when it finishes. Later polls take a few seconds. `make poll` runs a single poll without the server.
+The server's first poll lists the stations and writes their latest readings, so the gauges appear within a minute or two, then reads the overflows, flood warnings, bathing waters and sea stations. Last, it fetches 28 days of history for every gauge, four at a time, which takes a few minutes more. Later polls take a few seconds. `make poll` runs a single poll without the server. The coastal stations need an API key; see [Deployment](#on-a-server).
 
 `make data` takes a few minutes on a first run, most of it waiting on the public [Overpass API](https://wiki.openstreetmap.org/wiki/Overpass_API) servers. Raw responses are cached in `.cache/overpass/` for a day, so a second run within that window takes seconds. Two flags change that behaviour:
 
@@ -82,9 +99,9 @@ python3 scripts/fetch_geodata.py --cached    # rebuild from the cache, however o
 
 Monitoring Cornwall runs as one self-contained process on a single server, and its data lives there with it. Nothing generated is committed to this repository: Leaflet and the map overlays are built on the machine that serves the site, by `make libs` and `make data`, and readings collect in `data/monitor.db`.
 
-`serve.py` is a small threaded HTTP server. It serves `site/`, answers `/api/stations/<id>/readings?days=N`, `/api/overflows/<id>` and `/api/marine/<id>?days=N` from the database, `/api/forecast/rain/<id>` and `/api/forecast/flow/<id>` from Open-Meteo, and `/api/bathing/<id>` from the Environment Agency, and polls the Environment Agency in a background thread; `--no-poll` turns the poller off where something else runs `python3 -m monitor.poll`. It binds to `localhost` on port 8090 by default; `--bind` and a port argument change both. Every response includes a Content Security Policy that allows scripts, styles and data from the site's own origin, plus basemap tiles from `server.arcgisonline.com`, and nothing else.
+`serve.py` is a small threaded HTTP server. It serves `site/`, answers `/api/stations/<id>/readings?days=N`, `/api/overflows/<id>` and `/api/marine/<id>?days=N` from the database, `/api/forecast/rain/<id>` and `/api/forecast/flow/<id>` from Open-Meteo, and `/api/bathing/<id>` from the Environment Agency, and runs the poller in a background thread; `--no-poll` turns the poller off where something else runs `python3 -m monitor.poll`. It binds to `localhost` on port 8090 by default; `--bind` and a port argument change both. Every response includes a Content Security Policy that allows scripts, styles and data from the site's own origin, plus basemap tiles from `server.arcgisonline.com`, and nothing else.
 
-Readings are kept indefinitely. 28 days of readings from all the county's stations take about 34 MB, so a year takes roughly 450 MB. The overflow spill log and the offshore observations are built up by polling and can't be fetched again, so the database is worth backing up.
+Readings are kept indefinitely. 28 days of readings from all the county's stations take about 34 MB, so a year takes roughly 450 MB. The overflow spill log, and the sea stations' observations beyond the week the APIs keep, are built up by polling and can't be fetched again, so the database is worth backing up.
 
 ### On a server
 
@@ -138,7 +155,9 @@ The service runs as the unprivileged `monitor` user and can write only to `data/
 install -m 600 -o root -g root /dev/null /etc/monitoring-cornwall.env
 echo 'CCO_API_KEY=…' >> /etc/monitoring-cornwall.env
 systemctl restart monitoring-cornwall
-``` Its log is in the journal:
+```
+
+Its log is in the journal:
 
 ```bash
 journalctl -u monitoring-cornwall -f
@@ -154,7 +173,7 @@ cd /srv/monitoring-cornwall && runuser -u monitor -- git pull && systemctl resta
 
 `monitor/` holds the server-side code. Once a day the poller lists the Environment Agency's level and rainfall stations within 110 km of the county, keeps those inside the county boundary or within 1.5 km of it (so the gauges on both banks of the Tamar are included), and reads each river station's published typical range. Stations that have reported nothing in 28 days are left off the map. Some stations list an old series beside the one that replaced it, and the poller uses whichever has a reading in the last week.
 
-Every 5 minutes it makes one request per kind of reading for the latest value from every station in England, keeps Cornwall's, and writes `site/data/live.json`, about 25 KB with every station's latest reading and state, which is everything the map needs to draw its markers. Then it fills gaps. A station whose newest reading is more than 15 minutes ahead of what was stored has missed readings, because the server was down or because the station uploads in batches, so its history is fetched from its last stored reading, four stations at a time. `live.json` is written again once the gaps are filled. A station's history is fetched from `/api/` only when its popup opens.
+Every 5 minutes it makes one request per kind of reading for the latest value from every station in England, keeps Cornwall's, and writes `site/data/live.json`, about 25 KB with every station's latest reading and state, which is everything the map needs to draw its markers. At the end of each poll, after the other feeds, it fills gaps. A station whose newest reading is more than 15 minutes ahead of what was stored has missed readings, because the server was down or because the station uploads in batches, so its history is fetched from its last stored reading, four stations at a time. `live.json` is written again once the gaps are filled. Every request the poller makes gives up after two minutes, however slowly an answer arrives, so one stalled feed can't hold up the rest. A station's history is fetched from `/api/` only when its popup opens.
 
 ## How flood warnings are collected
 
@@ -198,7 +217,7 @@ Railway ways are classified by line name, then by `usage` tag. Heritage and tour
 
 ## Tests
 
-`make test` runs both test suites, which use only Python's `unittest` and Node's built-in test runner, so there's nothing to install beyond Python 3.10 or later and Node 22 or later. The Python tests cover the poller, the spill log, flood warnings, forecasts, bathing waters, offshore stations, geometry and the server's endpoints and headers; each runs against a temporary database, with the Environment Agency, South West Water, Open-Meteo, NRFA and NOAA replaced by fixed responses, several of them trimmed copies of real ones in `tests/fixtures/`, so they need no network. The JavaScript tests load the page's scripts into a sandbox and check the chart arithmetic, the escaping and the tooltip text. GitHub Actions runs `make test` on every push to `main` and every pull request, on Python 3.10 and 3.13.
+`make test` runs both test suites, which use only Python's `unittest` and Node's built-in test runner, so there's nothing to install beyond Python 3.10 or later and Node 22 or later. The Python tests cover the poller and its order, the time limit on requests, the spill log, flood warnings, forecasts, bathing waters, the sea stations, geometry and the server's endpoints and headers; each runs against a temporary database, with the Environment Agency, South West Water, Open-Meteo, NRFA, NOAA and the Channel Coastal Observatory replaced by fixed responses, several of them trimmed copies of real ones in `tests/fixtures/`, so they need no network. The JavaScript tests load the page's scripts into a sandbox and check the chart arithmetic, the escaping and the tooltip text. GitHub Actions runs `make test` on every push to `main` and every pull request, on Python 3.10 and 3.13.
 
 ## Project layout
 
@@ -227,9 +246,11 @@ site/js/stations.js       station and overflow popups and their charts
 site/js/floods.js         the flood warning banner and header indicator
 site/js/app.js            tab routing and the status line
 site/js/utils.js          escaping, formatting and the theme toggle
+site/img/                 the favicon and the link preview card
 tests/                    Python tests (unittest), one file per module
 tests/js/                 JavaScript tests (node --test)
 deploy/                   systemd units and Caddy configuration for a server
+docs/                     the screenshot at the top of this file
 ```
 
 ## Contributing
