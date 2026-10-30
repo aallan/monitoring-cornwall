@@ -57,11 +57,11 @@ SIMPLIFY_RIVER = 0.00004
 SIMPLIFY_STREAM = 0.00012
 SIMPLIFY_RAIL = 0.00003
 SIMPLIFY_BOUNDARY = 0.0001
-# Rivers stop where they reach tidal water, except within this distance of the
-# county boundary line.
+# Rivers end where they leave the county's low-water boundary. Points within
+# this distance of the boundary line count as inside it.
 ESTUARY_TOLERANCE_M = 60
 # Rivers that form the county boundary. They wander either side of the
-# boundary line, so they skip the land check and stop only at the coastline.
+# boundary line, so they skip the boundary check and end at their tidal limit.
 BORDER_RIVERS = {"River Tamar"}
 PRECISION = 5  # decimal places, ~1 m
 
@@ -303,10 +303,10 @@ class Coastline:
 class LandMask:
     """Point tests against the boundary rings, using a grid index.
 
-    The OSM county boundary follows the low-water line, so estuaries and
-    tidal creeks fall outside it. ``keep()`` is true on land, and also within
-    ``tol_m`` of the boundary line itself, so that the Tamar, which *is* the
-    boundary, is not cut to pieces.
+    The OSM county boundary follows the low-water line, so the lower reaches
+    of most estuaries fall outside it. ``keep()`` is true inside the boundary,
+    and also within ``tol_m`` of the boundary line itself, so a river that
+    reaches the boundary ends on it rather than just short of it.
     """
 
     CELL = 0.002  # degrees, ~140 m east-west and ~220 m north-south here
@@ -425,20 +425,23 @@ def fetch_waterways(land, coast):
         # Canal and the Par Canal.
         if t.get("waterway") == "canal" and (t.get("disused") or t.get("abandoned") or t.get("usage") == "disused"):
             continue
-        if t.get("tidal") == "yes":
-            continue
         name = river_name(t["name"]) if t.get("name") else ""
+        if name in BORDER_RIVERS and t.get("tidal") == "yes":
+            continue
         by_name[name].append(coords_of(w))
         kind_of.setdefault(name, t.get("waterway"))
 
     rivers = []
     for name, lines in by_name.items():
         # OSM carries river centrelines down the middle of estuaries to the
-        # sea. Stop them at tidal water, as a printed map would: at the first
-        # coastline crossing, and anywhere they leave the county's low-water
-        # boundary. Ways tagged tidal=yes were already dropped above.
-        cut = [coast.cut(l) for l in merge_lines(lines)]
-        merged = cut if name in BORDER_RIVERS else [run for l in cut for run in land.clip(l)]
+        # sea. Each river ends where it meets the water outside the county's
+        # low-water boundary, which the map dims. A border river runs along
+        # that boundary instead of meeting it, so it ends at its tidal limit:
+        # its tidal ways are dropped above, and it is cut at the coastline.
+        if name in BORDER_RIVERS:
+            merged = [coast.cut(l) for l in merge_lines(lines)]
+        else:
+            merged = [run for l in merge_lines(lines) for run in land.clip(l)]
         if not merged:
             continue
         parts = [rnd(simplify(l, SIMPLIFY_RIVER)) for l in merged]

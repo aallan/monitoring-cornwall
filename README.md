@@ -9,7 +9,7 @@ The site is a single page with no framework and no build step. The server and th
 | Layer | OpenStreetMap source | Notes |
 |---|---|---|
 | County boundary | Relations [57537](https://www.openstreetmap.org/relation/57537) (Cornwall) and [158039](https://www.openstreetmap.org/relation/158039) (Isles of Scilly) | Everything outside the county is dimmed |
-| Rivers | `waterway=river` and `waterway=canal` | One line per named river, with flow arrows from zoom 12. Each river stops at its tidal limit. The two canals that still hold water, the Bude Canal and the Par Canal, are included |
+| Rivers | `waterway=river` and `waterway=canal` | One line per named river, with flow arrows from zoom 12. Each river ends where it meets the dimmed water outside the county. The two canals that still hold water, the Bude Canal and the Par Canal, are included |
 | Streams | `waterway=stream` | Shown from zoom 12 |
 | Passenger lines | `railway=rail` | The Cornish Main Line and the Atlantic Coast, Maritime, Looe Valley, Tamar Valley and St Ives Bay lines |
 | Freight branches | `railway=rail` with `usage=industrial` or `freight` | The china clay lines around Par and St Blazey |
@@ -55,13 +55,9 @@ Every response includes a Content Security Policy that allows scripts, styles an
 
 Queries select Cornwall by relation ID. The UK county is tagged `Kernow / Cornwall`, and a query on the name `Cornwall` returns Cornwall, Ontario.
 
-OpenStreetMap draws river centrelines down the middle of each estuary to the open sea, which on a map reads as a river flowing across open water. The script ends each river at the tidal limit instead, in three steps:
+OpenStreetMap draws river centrelines down the middle of each estuary to the open sea, which on a map reads as a river flowing across open water. The county boundary follows the low-water line, so it runs up the lower reaches of most estuaries, and the map dims everything outside it. Each river is trimmed where it leaves the boundary, which ends it where it meets that dimmed water. The Fal, for example, ends just above King Harry Ferry rather than running down Carrick Roads to Falmouth Bay.
 
-1. Ways tagged `tidal=yes` are dropped.
-2. Each river is cut where it first crosses `natural=coastline`. In UK OpenStreetMap the coastline runs up each estuary and closes across the river at about the tidal limit.
-3. Anything left outside the county's low-water boundary is trimmed.
-
-The Tamar is the exception. Its centreline is the county boundary, so the area query misses most of it; the script fetches it by name along its whole valley, and it skips the third step, ending at Gunnislake weir.
+The Tamar works differently, because its centreline is the boundary. The area query misses most of it, so the script fetches it by name along its whole valley. It never leaves the boundary, so it ends at its tidal limit instead: its `tidal=yes` ways are dropped, and it is cut where it crosses `natural=coastline` at Gunnislake weir.
 
 Railway ways are classified by line name, then by `usage` tag. Heritage and tourist railways are left off the map, as are yards, sidings and crossovers.
 
