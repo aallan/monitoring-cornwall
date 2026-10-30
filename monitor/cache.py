@@ -12,6 +12,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
+from . import net
 from .ea import USER_AGENT, log
 
 _store = {}
@@ -21,8 +22,7 @@ _lock = threading.Lock()
 def get_json(url, params=None, timeout=20):
     query = f"?{urllib.parse.urlencode(params)}" if params else ""
     req = urllib.request.Request(url + query, headers={"User-Agent": USER_AGENT})
-    with urllib.request.urlopen(req, timeout=timeout) as r:
-        return json.loads(r.read())
+    return json.loads(net.fetch(req, timeout=timeout))
 
 
 def cached(key, ttl, fetch):

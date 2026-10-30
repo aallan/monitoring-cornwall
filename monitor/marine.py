@@ -14,6 +14,7 @@ import time
 import urllib.request
 from pathlib import Path
 
+from . import net
 from .ea import USER_AGENT
 from .geo import in_region
 
@@ -68,8 +69,7 @@ def parse(text):
 
 def fetch(station):
     req = urllib.request.Request(FEED.format(station), headers={"User-Agent": USER_AGENT})
-    with urllib.request.urlopen(req, timeout=30) as r:
-        return parse(r.read().decode("ascii", "replace"))
+    return parse(net.fetch(req).decode("ascii", "replace"))
 
 
 def store(con, station, rows):

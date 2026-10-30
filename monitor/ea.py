@@ -4,7 +4,6 @@ The API is open, with no key, under the Open Government Licence:
 https://environment.data.gov.uk/flood-monitoring/doc/reference
 """
 
-import gzip
 import json
 import math
 import sys
@@ -16,6 +15,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
 
+from . import net
 from .geo import LandMask, in_region
 
 API = "https://environment.data.gov.uk/flood-monitoring"
@@ -47,11 +47,7 @@ def get(path, params=None, retries=3):
     for attempt in range(retries):
         req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT, "Accept-Encoding": "gzip"})
         try:
-            with urllib.request.urlopen(req, timeout=30) as r:
-                body = r.read()
-                if r.headers.get("Content-Encoding") == "gzip":
-                    body = gzip.decompress(body)
-                return json.loads(body)
+            return json.loads(net.fetch(req))
         except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as e:
             if attempt == retries - 1:
                 raise

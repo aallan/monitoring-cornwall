@@ -23,48 +23,51 @@ STATION_REFRESH = 24 * 3600
 def cycle():
     con = db.connect()
     try:
-        # The two feeds are independent; a failure in one doesn't stop the other.
-        try:
-            poll_gauges(con)
-        except Exception as e:  # noqa: BLE001
-            ea.log(f"gauge poll failed: {e}")
-        try:
-            poll_overflows(con)
-        except Exception as e:  # noqa: BLE001
-            ea.log(f"overflow poll failed: {e}")
-        try:
-            poll_floods(con)
-        except Exception as e:  # noqa: BLE001
-            ea.log(f"flood warning poll failed: {e}")
-        try:
-            poll_bathing(con)
-        except Exception as e:  # noqa: BLE001
-            ea.log(f"bathing water poll failed: {e}")
-        try:
-            poll_marine(con)
-        except Exception as e:  # noqa: BLE001
-            ea.log(f"offshore station poll failed: {e}")
+        # The feeds are independent; a failure in one doesn't stop the others.
+        # Filling gaps in the gauges' history comes last, because on a first
+        # run, or after the server has been down, it can take minutes.
+        gaps = None
+        for name, poll in (("gauge", poll_gauges), ("overflow", poll_overflows),
+                           ("flood warning", poll_floods), ("bathing water", poll_bathing),
+                           ("offshore station", poll_marine)):
+            try:
+                result = poll(con)
+                if name == "gauge":
+                    gaps = result
+            except Exception as e:  # noqa: BLE001
+                ea.log(f"{name} poll failed: {e}")
+        if gaps:
+            try:
+                fill_gauge_gaps(con, *gaps)
+            except Exception as e:  # noqa: BLE001
+                ea.log(f"gauge history fill failed: {e}")
     finally:
         con.close()
 
 
 def poll_gauges(con):
+    """The latest reading at every gauge, written to live.json. Returns what
+    fill_gauge_gaps needs to fetch any missing history."""
     refreshed = int(db.get_meta(con, "stations_refreshed", 0))
     if time.time() - refreshed > STATION_REFRESH:
+        ea.log("refreshing the station list")
         n = ea.refresh_stations(con)
         db.set_meta(con, "stations_refreshed", int(time.time()))
         con.commit()
         ea.log(f"station list refreshed: {n} stations")
-    # The latest readings go to the map first; filling gaps can take a
-    # while when several stations need their history fetched.
     latest, held = ea.store_latest(con)
     db.set_meta(con, "last_poll", int(time.time()))
     con.commit()
     live.write(con)
+    ea.log(f"gauges: {len(latest)} latest readings")
+    return latest, held
+
+
+def fill_gauge_gaps(con, latest, held):
     filled = ea.fill_gaps(con, latest, held)
     if filled:
         live.write(con)
-    ea.log(f"gauges: {len(latest)} latest readings, {filled} series filled in")
+        ea.log(f"gauges: {filled} series filled in")
 
 
 def poll_floods(con):

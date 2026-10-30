@@ -9,7 +9,6 @@ Names, asset types and yearly totals come from the regulatory annual returns,
 published as a second FeatureServer.
 """
 
-import gzip
 import json
 import math
 import re
@@ -19,7 +18,7 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
-from . import db
+from . import db, net
 from .ea import USER_AGENT, log
 from .geo import LandMask, in_region
 
@@ -56,11 +55,7 @@ def post(url, params, retries=3):
             "User-Agent": USER_AGENT, "Accept-Encoding": "gzip",
             "Content-Type": "application/x-www-form-urlencoded"})
         try:
-            with urllib.request.urlopen(req, timeout=30) as r:
-                raw = r.read()
-                if r.headers.get("Content-Encoding") == "gzip":
-                    raw = gzip.decompress(raw)
-            data = json.loads(raw)
+            data = json.loads(net.fetch(req))
             if "error" in data:
                 raise RuntimeError(data["error"])
             return data
