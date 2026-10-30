@@ -23,9 +23,11 @@ Storm overflows come from South West Water's [storm overflow activity feed](http
 | Marker | Meaning | Shown |
 |---|---|---|
 | Saturated, pulsing | Spilling now | At every zoom |
-| Medium | Spilled in the last 48 hours | At every zoom |
-| Pale | Quiet: no spill in the last 48 hours | From zoom 11 |
-| Hollow grey | Monitor offline | From zoom 11 |
+| Medium | Spilled in the last 48 hours | At every zoom, once switched on |
+| Pale | Quiet: no spill in the last 48 hours | From zoom 11, once switched on |
+| Hollow grey | Monitor offline | From zoom 11, once switched on |
+
+Only the overflows spilling now are shown when the page opens; the other tiers are switched on from the legend.
 
 An overflow's popup shows its spills over the last 30 days as a timeline, and its spill hours and spill count for each year from the regulatory [annual returns](https://www.arcgis.com/home/item.html?id=66fef44a4aab438991d7ce08fbc1de64).
 
@@ -43,7 +45,7 @@ The rest of the map comes from OpenStreetMap.
 | Stations | `railway=station` and `railway=halt` | National Rail stations, each with its CRS code |
 | Major roads | `highway=trunk`, `primary` or `motorway` with a one- or two-digit A-road `ref` | The A30, A38 and A39, labelled with their numbers. Slip roads are left out |
 
-Every layer is on by default. Hovering over a river, line, road or station shows its name. Each row in the legend switches its layer on and off, and each section heading (Flood warnings, Live readings, Storm overflows, Waterways, Railways, Roads) switches the whole section. The page follows the system's light or dark setting, with a toggle to override it.
+Every layer is on when the page opens, apart from the storm overflows that aren't spilling now. Hovering over a river, line, road or station shows its name. Each row in the legend switches its layer on and off, and each section heading (Flood warnings, Live readings, Storm overflows, Waterways, Railways, Roads) switches the whole section. A layer that's off is dimmed and struck through. The page follows the system's light or dark setting, with a toggle to override it.
 
 ## Running it
 

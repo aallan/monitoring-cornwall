@@ -44,8 +44,10 @@ const CornwallMap = (() => {
     tidal:     { on: true },
     rain:      { on: true },
     csoNow:    { on: true },
-    csoRecent: { on: true },
-    csoQuiet:  { on: true },
+    // Off at first: there are hundreds of these, and the ones that matter
+    // today are those spilling now.
+    csoRecent: { on: false },
+    csoQuiet:  { on: false },
     floods:    { on: true },
   };
   // Legend sections whose heading switches the whole group.
@@ -554,11 +556,14 @@ const CornwallMap = (() => {
       const div = L.DomUtil.create('div', 'map-legend');
       const item = (key, swatch, colour, text, extra = '') =>
         `<button type="button" class="legend-item" data-key="${key}" aria-pressed="true">
-           <span class="swatch ${swatch}" style="--c: var(${colour})"></span>${esc(text)}${extra}
+           <span class="swatch ${swatch}" style="--c: var(${colour})"></span><span class="legend-label">${esc(text)}</span>${extra}
          </button>`;
       const title = (group, text) =>
         `<button type="button" class="legend-title legend-group" data-group="${group}"
            title="Show or hide all ${esc(text.toLowerCase())}">${esc(text)}</button>`;
+      // Say how the legend works: rows and headings are switches.
+      const verb = window.matchMedia('(hover: none)').matches ? 'Tap' : 'Click';
+      const hint = `${verb} a layer to show or hide it, or a heading for its whole section.`;
       // Collapsed by default on phones, where the full legend hides the map.
       const collapsed = window.matchMedia('(max-width: 640px)').matches;
       div.classList.toggle('collapsed', collapsed);
@@ -567,6 +572,7 @@ const CornwallMap = (() => {
           Layers<span class="legend-chevron" aria-hidden="true"></span>
         </button>
         <div class="legend-body" id="legend-body">
+        <p class="legend-hint">${hint}</p>
         <div class="legend-col">
         ${title('floods', 'Flood warnings')}
         ${item('floods', 'area flood-swatch', '--flood-warning', 'Warning and alert areas', '<span class="count" id="legend-count-floods"></span>')}
@@ -593,6 +599,7 @@ const CornwallMap = (() => {
         ${item('boundary', 'area', '--accent', 'Cornwall')}
         </div>
         </div>`;
+      syncLegend(div);
       L.DomEvent.disableClickPropagation(div);
       L.DomEvent.disableScrollPropagation(div);
       div.addEventListener('click', e => {

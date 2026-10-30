@@ -328,6 +328,10 @@ body.map-mode footer { display: none; }
     display: grid; grid-template-columns: 1fr 1fr; column-gap: 1.25rem;
 }
 .legend-col { min-width: 0; }
+.legend-hint {
+    grid-column: 1 / -1; margin: 0.3rem 0 0.15rem; font-size: 0.72rem; line-height: 1.35;
+    color: var(--text-tertiary);
+}
 .legend-title {
     font-size: 0.7rem; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.04em;
     margin: 0.35rem 0 0.2rem;
@@ -347,6 +351,7 @@ body.map-mode footer { display: none; }
 }
 .legend-item:hover { background: var(--bg-hover); }
 .legend-item.off { color: var(--text-tertiary); }
+.legend-item.off .legend-label { text-decoration: line-through; text-decoration-color: var(--text-tertiary); }
 .legend-item .count { margin-left: auto; color: var(--text-tertiary); font-size: 0.72rem; font-variant-numeric: tabular-nums; }
 
 /* Swatches: filled when the layer is on, hollow when off (house legend) */
