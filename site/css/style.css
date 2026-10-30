@@ -46,6 +46,7 @@
     --flood-warning: #d9822b;
     --flood-alert: #c9a227;
     --station-fill: #ffffff;
+    --hollow-fill: #fcf8ef;  /* hollow markers show the county's land colour */
     --mask: #d9d5cd;
     --mask-opacity: 0.55;
     --tile-filter: sepia(0.18) saturate(0.85) brightness(1.02);
@@ -90,6 +91,7 @@
         --flood-warning: #e39a52;
         --flood-alert: #d9bd4f;
         --station-fill: #262522;
+        --hollow-fill: #4d4b49;
         --mask: #0e0d0c;
         --mask-opacity: 0.5;
         --tile-filter: sepia(0.25) saturate(0.7);
@@ -133,6 +135,7 @@
     --flood-warning: #e39a52;
     --flood-alert: #d9bd4f;
     --station-fill: #262522;
+    --hollow-fill: #4d4b49;
     --mask: #0e0d0c;
     --mask-opacity: 0.5;
     --tile-filter: sepia(0.25) saturate(0.7);
@@ -418,9 +421,9 @@ footer { width: 100%; padding: 0 2rem 1.5rem; }
 .stn-level.is-unknown { background: var(--level-unknown); }
 .stn-tidal { --size: 12px; --rot: 45deg; border-radius: 2px; background: var(--tidal); }
 /* A drop: a rounded square with one sharp corner, pointing down */
-.stn-rain { --rot: -45deg; border-radius: 50% 50% 50% 0; background: var(--station-fill); border-color: var(--rain); border-width: 2px; }
+.stn-rain { --rot: -45deg; border-radius: 50% 50% 50% 0; background: var(--hollow-fill); border-color: var(--rain); border-width: 2px; }
 .stn-rain.is-raining { background: var(--rain); border-color: var(--station-fill); border-width: 1.5px; }
-.stn.is-stale, .stn.is-no-data { background: var(--station-fill); border-color: var(--text-tertiary); box-shadow: none; }
+.stn.is-stale, .stn.is-no-data { background: var(--hollow-fill); border-color: var(--text-tertiary); box-shadow: none; }
 
 /* Legend swatches for the station kinds */
 .swatch.gauge::before { left: 6px; right: auto; width: 10px; height: 10px; }
@@ -494,7 +497,7 @@ footer { width: 100%; padding: 0 2rem 1.5rem; }
 .cso.is-spilling { background: var(--cso); animation: cso-pulse 1.8s ease-in-out infinite; }
 .cso.is-recent { background: var(--cso-recent); }
 .cso.is-quiet { --size: 10px; }
-.cso.is-offline { --size: 10px; background: var(--station-fill); border-color: var(--text-tertiary); box-shadow: none; }
+.cso.is-offline { --size: 10px; background: var(--hollow-fill); border-color: var(--text-tertiary); box-shadow: none; }
 @keyframes cso-pulse {
     0%, 100% { box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.15), 0 0 0 0 var(--cso); }
     50% { box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.15), 0 0 0 4px rgba(123, 63, 160, 0.25); }

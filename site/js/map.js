@@ -360,7 +360,7 @@ const CornwallMap = (() => {
       m.setStyle({
         radius: 3.6 * zoomScale(),
         color: cssVar('--rail'), weight: 1.6,
-        fillColor: cssVar('--station-fill'), fillOpacity: 1, opacity: 1,
+        fillColor: cssVar('--hollow-fill'), fillOpacity: 1, opacity: 1,
       });
     });
     style();
