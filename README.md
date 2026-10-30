@@ -1,5 +1,7 @@
 # Monitoring Cornwall
 
+![Monitoring Cornwall: the map of Cornwall with its river gauges, rain gauges, storm overflows, bathing waters and buoys, the layers legend open, and the Seven Stones lightvessel's popup charting a week of wave height](docs/screenshot.webp)
+
 Monitoring Cornwall shows which of the county's rivers are high and rising, which storm overflows are spilling, how clean the water is at each beach, and what the rain and the rivers are forecast to do next. It brings the Environment Agency's gauges, flood warnings and bathing waters, South West Water's storm overflow monitors, Met Office observations at sea and Open-Meteo's forecasts together on one map of Cornwall, drawn from [OpenStreetMap](https://www.openstreetmap.org/). It's a companion to [Floodwatch](https://github.com/aallan/floodwatch), which monitors the River Taw catchment in Devon at [tawriver.watch](https://tawriver.watch).
 
 The site is a single page with no framework and no build step. The server, the readings poller and the map data pipeline use only the Python standard library, with readings kept in SQLite.
