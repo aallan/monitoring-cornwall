@@ -660,6 +660,8 @@ const CornwallMap = (() => {
         ${item('csoQuiet', 'cso-swatch is-quiet', '--cso-quiet', 'Quiet or offline', '<span class="count"><span id="legend-cso-quiet-hint">zoom in · </span><span id="legend-count-csoQuiet"></span></span>')}
         <div class="legend-key"><span class="works-key"></span>at a treatment works</div>
         <div class="legend-key"><span class="works-key is-network"></span>on the sewer network</div>
+        <div class="legend-title">Boundary</div>
+        ${item('boundary', 'area', '--accent', 'Cornwall')}
         </div>
         <div class="legend-col">
         ${title('waterways', 'Waterways')}
@@ -677,8 +679,6 @@ const CornwallMap = (() => {
         ${item('stations', 'dot', '--rail', 'Stations', '<span class="count" id="legend-count-stations"></span>')}
         ${title('roads', 'Roads')}
         ${item('roads', 'road', '--road', 'Major roads')}
-        <div class="legend-title">Boundary</div>
-        ${item('boundary', 'area', '--accent', 'Cornwall')}
         </div>
         </div>`;
       syncLegend(div);
