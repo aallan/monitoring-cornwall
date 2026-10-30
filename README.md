@@ -216,6 +216,7 @@ monitor/db.py             SQLite schema and connection
 monitor/geo.py            boundary geometry shared with the overlay builder
 scripts/fetch_geodata.py  OpenStreetMap to site/data/*.geojson, data/places.json and data/neighbours.geojson
 scripts/calibrate_flow.py finds the GloFAS cell that carries a river past an NRFA gauge
+scripts/og_image.py       draws site/img/og-image.png, the link preview card, with headless Chrome
 libs.sha256               checksums for the downloaded Leaflet files
 site/index.html           the page
 site/css/style.css        layout and theme, light and dark

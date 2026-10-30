@@ -3,7 +3,7 @@ PYTHON  := $(shell which python3)
 PORT    := 8090
 LEAFLET := 1.9.4
 
-.PHONY: help libs data poll serve test test-py test-js clean
+.PHONY: help libs data poll serve test test-py test-js og clean
 
 help:
 	@echo "make libs    download Leaflet $(LEAFLET) into site/lib and verify it"
@@ -11,6 +11,7 @@ help:
 	@echo "make poll    fetch the latest Environment Agency readings once"
 	@echo "make serve   run the server, which also polls every 5 minutes"
 	@echo "make test    run the Python and JavaScript tests (needs Node 22 or later)"
+	@echo "make og      redraw the link preview image (needs Google Chrome and make data)"
 	@echo "make clean   remove downloaded libraries, overlays and the download cache"
 	@echo "             (the readings database in data/ is kept)"
 
@@ -38,6 +39,9 @@ test-py:
 
 test-js:
 	node --test 'tests/js/*.test.mjs'
+
+og:
+	$(PYTHON) scripts/og_image.py
 
 clean:
 	rm -rf site/lib site/data .cache data/places.json
