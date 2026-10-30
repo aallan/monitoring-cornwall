@@ -8,7 +8,10 @@ const CornwallMap = (() => {
 
   // Mainland Cornwall; Scilly is reachable by panning.
   const CORNWALL_BOUNDS = [[49.95, -5.76], [50.94, -4.16]];
-  const MAX_BOUNDS = [[49.55, -6.75], [51.35, -3.55]];
+  // Loose enough that the opening view can sit Cornwall beside the legend.
+  // Mainland Cornwall with the Isles of Scilly, for centring when there's room.
+  const WITH_SCILLY = [[49.86, -6.45], [50.94, -4.16]];
+  const MAX_BOUNDS = [[49.3, -7.6], [51.6, -2.4]];
 
   const MAJOR_RIVER_KM = 20;     // rivers at least this long are labelled first
   const MAJOR_LABEL_ZOOM = 9;    // long rivers labelled from here
@@ -30,6 +33,8 @@ const CornwallMap = (() => {
   let legendReady = false;
   let baseTiles = null;
   let refTiles = null;
+
+  const PHONE = window.matchMedia('(max-width: 640px)');
 
   // Legend toggles. Each map part belongs to one toggle and may have a min zoom.
   const toggles = {
@@ -551,7 +556,9 @@ const CornwallMap = (() => {
   }
 
   function addLegend() {
-    const ctl = L.control({ position: 'bottomleft' });
+    // Bottom right on wider screens, clear of the Isles of Scilly in the
+    // south-west; bottom left on phones, where it starts collapsed.
+    const ctl = L.control({ position: PHONE.matches ? 'bottomleft' : 'bottomright' });
     ctl.onAdd = () => {
       const div = L.DomUtil.create('div', 'map-legend');
       const item = (key, swatch, colour, text, extra = '') =>
@@ -565,7 +572,7 @@ const CornwallMap = (() => {
       const verb = window.matchMedia('(hover: none)').matches ? 'Tap' : 'Click';
       const hint = `${verb} a layer to show or hide it, or a heading for its whole section.`;
       // Collapsed by default on phones, where the full legend hides the map.
-      const collapsed = window.matchMedia('(max-width: 640px)').matches;
+      const collapsed = PHONE.matches;
       div.classList.toggle('collapsed', collapsed);
       div.innerHTML = `
         <button type="button" class="legend-head" aria-expanded="${!collapsed}" aria-controls="legend-body">
@@ -656,11 +663,11 @@ const CornwallMap = (() => {
     map.attributionControl.addAttribution('Readings: <a href="https://environment.data.gov.uk/flood-monitoring/doc/reference">Environment Agency</a>');
     map.attributionControl.addAttribution('Overflows: <a href="https://www.arcgis.com/home/item.html?id=cabfce76b72a4a278a33d737c0708d42">South West Water</a>');
     map.setView([50.45, -4.95], 9, { animate: false });  // placeholder until the container has a size
-    fitIfVisible();
     makePanes();
     setTiles();
 
     addLegend();
+    fitIfVisible();  // after the legend, which it fits around
     legendReady = true;
     fitLegend();
     map.on('resize', fitLegend);
@@ -704,15 +711,28 @@ const CornwallMap = (() => {
   // Fit Cornwall the first time the map is visible. Fitting while the view is
   // hidden (zero size) would zoom all the way in.
   let fitted = false;
-  // Zoom is whole levels only, and flooring the fit leaves Cornwall small, so
-  // round to the nearest level instead: a slight crop beats a tiny county.
+  // Zoom is whole levels only. Round up when that crops only a little (within
+  // 0.2 of a level, about 15%), since a slight crop beats a small county;
+  // otherwise round down, so a big screen shows the whole county.
+  // An open legend on the right takes its width out of the space the county
+  // is fitted and centred in, so the legend doesn't sit over the county.
   function fitIfVisible() {
     if (fitted || !map || map.getSize().x === 0) return;
+    const legend = map.getContainer().querySelector('.leaflet-right .map-legend:not(.collapsed)');
+    let side = legend ? legend.offsetWidth + 20 : 0;
+    if (map.getSize().x - side < 360) side = 0;  // too narrow to share; fit the whole map
     const snap = map.options.zoomSnap;
     map.options.zoomSnap = 0;
-    const exact = map.getBoundsZoom(CORNWALL_BOUNDS);
+    const exact = map.getBoundsZoom(CORNWALL_BOUNDS, false, L.point(side, 0));
     map.options.zoomSnap = snap;
-    map.setView(L.latLngBounds(CORNWALL_BOUNDS).getCenter(), Math.round(exact), { animate: false });
+    const zoom = Math.ceil(exact) - exact <= 0.2 ? Math.ceil(exact) : Math.floor(exact);
+    // Centre on the mainland and Scilly together if both fit beside the
+    // legend at this zoom; otherwise on the mainland alone.
+    const span = b => map.project(b.getNorthEast(), zoom).x - map.project(b.getSouthWest(), zoom).x;
+    const withScilly = L.latLngBounds(WITH_SCILLY);
+    const target = span(withScilly) <= map.getSize().x - side - 20 ? withScilly : L.latLngBounds(CORNWALL_BOUNDS);
+    const centre = map.project(target.getCenter(), zoom).add([side / 2, 0]);
+    map.setView(map.unproject(centre, zoom), zoom, { animate: false });
     fitted = true;
   }
 
@@ -723,10 +743,13 @@ const CornwallMap = (() => {
 
   // Keep the legend clear of the zoom buttons: no taller than the map, less
   // the zoom control and the margins around both.
-  const LEGEND_CLEARANCE = 100;
+  // Keep the legend inside the map: no taller than the map, less the margins
+  // and, on the left, the zoom buttons above it.
   function fitLegend() {
     const legend = map && map.getContainer().querySelector('.map-legend');
-    if (legend) legend.style.setProperty('--legend-max', `${Math.max(120, map.getSize().y - LEGEND_CLEARANCE)}px`);
+    if (!legend) return;
+    const clearance = legend.closest('.leaflet-left') ? 100 : 30;
+    legend.style.setProperty('--legend-max', `${Math.max(120, map.getSize().y - clearance)}px`);
   }
 
   // `map` is exposed read-only for debugging from the console.
