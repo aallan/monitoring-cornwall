@@ -163,7 +163,7 @@ Its log is in the journal:
 journalctl -u monitoring-cornwall -f
 ```
 
-To update, pull and restart:
+To update, pull and restart. The first poll after a restart reads every feed straight away, whatever its schedule, so a change shows within a minute or two:
 
 ```bash
 cd /srv/monitoring-cornwall && runuser -u monitor -- git pull && systemctl restart monitoring-cornwall

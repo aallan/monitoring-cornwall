@@ -19,8 +19,14 @@ from . import bathing, db, ea, floods, live, marine, overflows
 INTERVAL = 5 * 60
 STATION_REFRESH = 24 * 3600
 
+# The first cycle after the server starts reads everything, whatever the
+# schedules say, so that whatever a deploy adds or changes shows straight away.
+_started = False
+
 
 def cycle():
+    global _started
+    fresh, _started = not _started, True
     con = db.connect()
     try:
         # The feeds are independent; a failure in one doesn't stop the others.
@@ -31,7 +37,7 @@ def cycle():
                            ("flood warning", poll_floods), ("bathing water", poll_bathing),
                            ("offshore station", poll_marine)):
             try:
-                result = poll(con)
+                result = poll(con, fresh)
                 if name == "gauge":
                     gaps = result
             except Exception as e:  # noqa: BLE001
@@ -45,11 +51,11 @@ def cycle():
         con.close()
 
 
-def poll_gauges(con):
+def poll_gauges(con, fresh=False):
     """The latest reading at every gauge, written to live.json. Returns what
     fill_gauge_gaps needs to fetch any missing history."""
     refreshed = int(db.get_meta(con, "stations_refreshed", 0))
-    if time.time() - refreshed > STATION_REFRESH:
+    if fresh or time.time() - refreshed > STATION_REFRESH:
         ea.log("refreshing the station list")
         n = ea.refresh_stations(con)
         db.set_meta(con, "stations_refreshed", int(time.time()))
@@ -70,9 +76,9 @@ def fill_gauge_gaps(con, latest, held):
         ea.log(f"gauges: {filled} series filled in")
 
 
-def poll_floods(con):
+def poll_floods(con, fresh=False):
     refreshed = int(db.get_meta(con, "flood_areas_refreshed", 0))
-    if time.time() - refreshed > STATION_REFRESH:
+    if fresh or time.time() - refreshed > STATION_REFRESH:
         n = floods.refresh_areas(con)
         db.set_meta(con, "flood_areas_refreshed", int(time.time()))
         con.commit()
@@ -82,9 +88,9 @@ def poll_floods(con):
     ea.log(f"flood warnings: {len(warnings)} in force")
 
 
-def poll_overflows(con):
+def poll_overflows(con, fresh=False):
     refreshed = int(db.get_meta(con, "overflows_refreshed", 0))
-    if time.time() - refreshed > STATION_REFRESH:
+    if fresh or time.time() - refreshed > STATION_REFRESH:
         n = overflows.refresh_overflows(con)
         db.set_meta(con, "overflows_refreshed", int(time.time()))
         if not db.get_meta(con, "overflow_log_started"):
@@ -96,9 +102,9 @@ def poll_overflows(con):
     ea.log(f"overflows: {n} statuses")
 
 
-def poll_bathing(con):
+def poll_bathing(con, fresh=False):
     """Bathing waters change at most daily, so they're read once an hour."""
-    if time.time() - int(db.get_meta(con, "bathing_refreshed", 0)) > bathing.REFRESH:
+    if fresh or time.time() - int(db.get_meta(con, "bathing_refreshed", 0)) > bathing.REFRESH:
         n = bathing.refresh(con)
         db.set_meta(con, "bathing_refreshed", int(time.time()))
         con.commit()
@@ -106,11 +112,11 @@ def poll_bathing(con):
     bathing.write_summary(con)
 
 
-def poll_marine(con):
+def poll_marine(con, fresh=False):
     """The sea stations report every half hour or hour, so they're read every
     half hour, and straight away whenever none are known yet."""
     known = con.execute("SELECT COUNT(*) FROM marine_stations WHERE active = 1").fetchone()[0]
-    if not known or time.time() - int(db.get_meta(con, "marine_refreshed", 0)) > marine.REFRESH:
+    if fresh or not known or time.time() - int(db.get_meta(con, "marine_refreshed", 0)) > marine.REFRESH:
         n, errors = marine.poll(con)
         db.set_meta(con, "marine_refreshed", int(time.time()))
         con.commit()
