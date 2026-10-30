@@ -684,9 +684,9 @@ footer { width: 100%; padding: 0 2rem 1.5rem; }
 .marine-grid { display: grid; grid-template-columns: auto 1fr; gap: 0.1rem 0.75rem; font-size: 0.8rem; margin: 0.2rem 0 0.5rem; }
 .marine-grid dt { color: var(--text-tertiary); }
 .marine-grid dd { margin: 0; font-variant-numeric: tabular-nums; }
-.bw-dot-ec { fill: var(--bw-excellent); }
-.bw-dot-ie { fill: var(--tidal); }
-.bw-dot-limit { fill: none; stroke-width: 1.3; }
-.bw-dot-ec.bw-dot-limit { stroke: var(--bw-excellent); }
-.bw-dot-ie.bw-dot-limit { stroke: var(--tidal); }
+.bw-bar.is-excellent { fill: var(--bw-excellent); }
+.bw-bar.is-sufficient { fill: var(--bw-sufficient); }
+.bw-bar.is-poor { fill: var(--bw-poor); }
+.bw-bar.is-limit { opacity: 0.4; }
+.bw-ref { stroke: var(--bw-excellent); stroke-dasharray: 5 4; }
 .stn-line-sea { stroke: var(--sea); }

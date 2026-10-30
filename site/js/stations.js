@@ -488,51 +488,73 @@ const StationPopup = (() => {
     return w.risk === 'increased' ? `${cls} · pollution risk raised today` : cls;
   }
 
-  // Recent samples, one column each, on a log scale: bacteria counts run
+  // The standards for coastal and estuarine bathing waters, which all of
+  // Cornwall's are, in cfu per 100 ml. A classification rests on four
+  // years of samples: for Excellent, 95% of them should be within the first
+  // figure; for Sufficient, 90% within the second.
+  const BACTERIA = [
+    { col: 1, q: 2, label: 'E. coli', name: 'E. coli', excellent: 250, sufficient: 500 },
+    { col: 3, q: 4, label: 'Enterococci', name: 'Intestinal enterococci', excellent: 100, sufficient: 185 },
+  ];
+
+  // How one sample compares with the standards.
+  const sampleBand = (v, b) => (v == null ? null : v <= b.excellent ? 'excellent' : v <= b.sufficient ? 'sufficient' : 'poor');
+
+  // Recent samples of one bacterium, a bar each, on a log scale: counts run
   // from under 10 to tens of thousands per 100 ml.
-  function drawSamples(host, readout, key, rows) {
+  function drawSamples(host, readout, key, rows, b) {
     host.textContent = '';
     readout.textContent = '';
-    if (!rows.length) {
+    const shown = rows.filter(r => r[b.col] != null);
+    if (!shown.length) {
       host.textContent = 'No samples published yet.';
+      key.textContent = '';
       return;
     }
-    const top = Math.pow(10, Math.max(3, Math.ceil(Math.log10(Math.max(...rows.flatMap(r => [r[1] || 1, r[3] || 1]))))));
+    const top = Math.pow(10, Math.max(3, Math.ceil(Math.log10(Math.max(...shown.map(r => r[b.col]))))));
     const svg = el('svg', { viewBox: `0 0 ${W} ${H}`, class: 'stn-chart', role: 'img',
-      'aria-label': `E. coli and intestinal enterococci in the last ${rows.length} samples` });
+      'aria-label': `${b.name} in the last ${shown.length} samples` });
     host.appendChild(svg);
-    const step = (W - M.l - M.r) / rows.length;
-    const x = i => M.l + (i + 0.5) * step;
+    const step = (W - M.l - M.r) / shown.length;
+    const x = i => M.l + i * step;
     const y = v => M.t + (1 - Math.log10(Math.max(v, 1)) / Math.log10(top)) * (H - M.t - M.b);
     for (let v = 1; v <= top; v *= 10) {
       el('line', { x1: M.l, x2: W - M.r, y1: y(v), y2: y(v), class: 'stn-grid' }, svg);
       el('text', { x: M.l - 5, y: y(v) + 3, 'text-anchor': 'end', class: 'stn-axis' }, svg).textContent = v.toLocaleString('en-GB');
     }
-    // A season starts after a gap of more than four months: mark and label it.
-    rows.forEach((r, i) => {
-      if (i && r[0] - rows[i - 1][0] < 120 * 86400) return;
-      if (i) el('line', { x1: x(i) - step / 2, x2: x(i) - step / 2, y1: M.t, y2: H - M.b, class: 'stn-grid' }, svg);
-      el('text', { x: x(i) - step / 2 + 2, y: H - 6, class: 'stn-axis' }, svg).textContent =
-        new Date(r[0] * 1000).toLocaleDateString('en-GB', { timeZone: TZ, month: 'short', year: 'numeric' });
+    // A season starts after a gap of more than four months: mark and label
+    // it, leaving out a label that would run into the next one.
+    const starts = shown.map((r, i) => i).filter(i => !i || shown[i][0] - shown[i - 1][0] >= 120 * 86400);
+    starts.forEach((i, n) => {
+      if (i) el('line', { x1: x(i), x2: x(i), y1: M.t, y2: H - M.b, class: 'stn-grid' }, svg);
+      if (n + 1 < starts.length && x(starts[n + 1]) - x(i) < 52) return;
+      el('text', { x: x(i) + 2, y: H - 6, class: 'stn-axis' }, svg).textContent =
+        new Date(shown[i][0] * 1000).toLocaleDateString('en-GB', { timeZone: TZ, month: 'short', year: 'numeric' });
     });
-    rows.forEach((r, i) => {
-      for (const [v, q, cls, dx] of [[r[1], r[2], 'bw-dot-ec', -2], [r[3], r[4], 'bw-dot-ie', 2]]) {
-        if (v == null) continue;
-        el('circle', { cx: x(i) + dx, cy: y(v), r: 2.6, class: `${cls}${q === '<' ? ' bw-dot-limit' : ''}` }, svg);
-      }
+    const bw = Math.max(2, step - 2);
+    shown.forEach((r, i) => {
+      const v = r[b.col];
+      const limit = r[b.q] === '<' ? ' is-limit' : '';
+      el('rect', { x: x(i) + (step - bw) / 2, y: y(v), width: bw, height: Math.max(1, y(1) - y(v)),
+        class: `bw-bar is-${sampleBand(v, b)}${limit}` }, svg);
     });
-    key.textContent = 'E. coli (teal) and intestinal enterococci (amber) per 100 ml, on a log scale. ' +
-      'Hollow dots were below the laboratory’s limit.';
+    el('line', { x1: M.l, x2: W - M.r, y1: y(b.excellent), y2: y(b.excellent), class: 'stn-ref bw-ref' }, svg);
+    key.textContent = `${b.name} per 100\u00a0ml, on a log scale. Dashed line: the Excellent standard, ` +
+      `${b.excellent}, which 95% of samples should be within. Pale bars were below the laboratory’s limit.`;
     const cursor = el('line', { y1: M.t, y2: H - M.b, class: 'stn-cursor', visibility: 'hidden' }, svg);
     svg.addEventListener('mousemove', e => {
       const box = svg.getBoundingClientRect();
       const i = Math.floor(((e.clientX - box.left) * W / box.width - M.l) / step);
-      const r = rows[i];
+      const r = shown[i];
       if (!r) return;
-      cursor.setAttribute('x1', x(i));
-      cursor.setAttribute('x2', x(i));
+      cursor.setAttribute('x1', x(i) + step / 2);
+      cursor.setAttribute('x2', x(i) + step / 2);
       cursor.setAttribute('visibility', 'visible');
-      readout.textContent = `${fmtDay(r[0])} · E. coli ${fmtCount(r[1], r[2])} · enterococci ${fmtCount(r[3], r[4])}`;
+      const v = r[b.col];
+      const verdict = r[b.q] === '<' ? 'below the laboratory’s limit'
+        : { excellent: 'within the Excellent standard', sufficient: 'above the Excellent standard',
+            poor: 'above the Sufficient standard' }[sampleBand(v, b)];
+      readout.textContent = `${fmtDay(r[0])} · ${b.name} ${fmtCount(v, r[b.q])}, ${verdict}`;
     });
     svg.addEventListener('mouseleave', () => { cursor.setAttribute('visibility', 'hidden'); readout.textContent = ''; });
   }
@@ -555,14 +577,15 @@ const StationPopup = (() => {
     if (w.rain_affected) box.appendChild(node('div', 'stn-pop-line', 'Water quality here can drop after heavy rain.'));
     if (w.sample) {
       box.appendChild(node('div', 'stn-pop-line', `Last sampled ${fmtDay(w.sample.ts)}: E. coli ` +
-        `${fmtCount(w.sample.ec, w.sample.ec_q)}, enterococci ${fmtCount(w.sample.ie, w.sample.ie_q)} per 100 ml`));
+        `${fmtCount(w.sample.ec, w.sample.ec_q)}, enterococci ${fmtCount(w.sample.ie, w.sample.ie_q)} per 100\u00a0ml`));
     }
 
     box.appendChild(node('div', 'cso-head', 'Recent samples'));
+    const tabs = node('div', 'stn-pop-ranges');
     const chartHost = node('div', 'stn-pop-chart loading');
     const key = node('div', 'stn-pop-key');
     const readout = node('div', 'stn-pop-readout');
-    box.append(chartHost, key, readout);
+    box.append(tabs, chartHost, key, readout);
     const source = node('div', 'stn-pop-source');
     source.appendChild(document.createTextNode('Environment Agency · '));
     if (w.eubwid) {
@@ -574,13 +597,26 @@ const StationPopup = (() => {
     }
     box.appendChild(source);
 
-    getJSON(`/api/bathing/${encodeURIComponent(w.id)}`).then(d => {
+    const samples = getJSON(`/api/bathing/${encodeURIComponent(w.id)}`);
+    let current = BACTERIA[0];
+    const render = () => samples.then(d => {
       chartHost.classList.remove('loading');
-      drawSamples(chartHost, readout, key, d.samples || []);
+      drawSamples(chartHost, readout, key, d.samples || [], current);
     }).catch(() => {
       chartHost.classList.remove('loading');
       chartHost.textContent = 'Samples are unavailable right now.';
     });
+    for (const b of BACTERIA) {
+      const btn = node('button', 'btn-toggle' + (b === current ? ' active' : ''), b.label);
+      btn.type = 'button';
+      btn.addEventListener('click', () => {
+        current = b;
+        tabs.querySelectorAll('button').forEach(x => x.classList.toggle('active', x === btn));
+        render();
+      });
+      tabs.appendChild(btn);
+    }
+    render();
     return box;
   }
 
@@ -856,6 +892,6 @@ const StationPopup = (() => {
     openBathing, bathingSummary, openMarine, marineSummary,
     // The chart arithmetic and formatting, for tests/js.
     _internals: { niceTicks, niceScale, levelAxis, timeTicks, tickLabel, rainBuckets, fmtValue, fmtFlow,
-      fmtCount, compass, marineRows },
+      fmtCount, compass, marineRows, sampleBand, BACTERIA },
   };
 })();

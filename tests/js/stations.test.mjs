@@ -111,3 +111,16 @@ test('offshore readings', () => {
   assert.equal(marineSummary({ state: 'live', wvht: 1.9, wtmp: 14 }), 'waves 1.9 m · sea 14.0 °C');
   assert.equal(marineSummary({ state: 'no-data' }), 'no readings yet');
 });
+
+test('bathing samples are judged against the coastal standards', () => {
+  const { sampleBand, BACTERIA } = StationPopup._internals;
+  const [ecoli, entero] = BACTERIA;
+  assert.equal(sampleBand(10, ecoli), 'excellent');
+  assert.equal(sampleBand(250, ecoli), 'excellent');
+  assert.equal(sampleBand(251, ecoli), 'sufficient');
+  assert.equal(sampleBand(501, ecoli), 'poor');
+  assert.equal(sampleBand(100, entero), 'excellent');
+  assert.equal(sampleBand(150, entero), 'sufficient');
+  assert.equal(sampleBand(186, entero), 'poor');
+  assert.equal(sampleBand(null, entero), null);
+});
