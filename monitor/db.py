@@ -30,6 +30,38 @@ CREATE TABLE IF NOT EXISTS readings (
     PRIMARY KEY (measure, ts)
 ) WITHOUT ROWID;
 
+-- Storm overflows: South West Water's Event Duration Monitors
+CREATE TABLE IF NOT EXISTS overflows (
+    id           TEXT PRIMARY KEY,       -- permit ID, e.g. SBB00407
+    name         TEXT,                   -- from the annual returns, where listed
+    asset_type   TEXT,
+    water        TEXT,                   -- receiving watercourse
+    lat          REAL NOT NULL,
+    lon          REAL NOT NULL,
+    status       INTEGER,                -- 1 spilling, 0 not spilling, -1 monitor offline
+    status_start INTEGER,                -- Unix seconds
+    last_seen    INTEGER,                -- the feed's lastUpdated for this overflow
+    active       INTEGER NOT NULL DEFAULT 1,
+    updated      INTEGER NOT NULL
+);
+
+-- One row per spill, built up by polling: the feed holds only the latest.
+CREATE TABLE IF NOT EXISTS overflow_events (
+    id      TEXT    NOT NULL,
+    started INTEGER NOT NULL,            -- Unix seconds
+    ended   INTEGER,                     -- NULL while still spilling
+    PRIMARY KEY (id, started)
+) WITHOUT ROWID;
+
+-- Yearly totals from the regulatory annual returns
+CREATE TABLE IF NOT EXISTS overflow_annual (
+    id     TEXT    NOT NULL,
+    year   INTEGER NOT NULL,
+    hours  REAL,
+    spills INTEGER,
+    PRIMARY KEY (id, year)
+) WITHOUT ROWID;
+
 CREATE TABLE IF NOT EXISTS meta (
     key   TEXT PRIMARY KEY,
     value TEXT

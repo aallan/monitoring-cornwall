@@ -21,7 +21,7 @@ from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-from monitor import db, poll
+from monitor import db, overflows, poll
 
 SITE = Path(__file__).resolve().parent / "site"
 DEFAULT_PORT = 8090
@@ -80,8 +80,16 @@ class Handler(SimpleHTTPRequestHandler):
         self.wfile.write(body)
 
     def handle_api(self, url):
-        # /api/stations/<id>/readings?days=N
         parts = url.path.strip("/").split("/")
+        # /api/overflows/<id>
+        if len(parts) == 3 and parts[:2] == ["api", "overflows"] and STATION_ID.match(parts[2]):
+            con = db.connect(read_only=True)
+            try:
+                found = overflows.detail(con, parts[2])
+            finally:
+                con.close()
+            return self.send_json(found) if found else self.send_json({"error": "no such overflow"}, 404)
+        # /api/stations/<id>/readings?days=N
         if len(parts) != 4 or parts[:2] != ["api", "stations"] or parts[3] != "readings" \
                 or not STATION_ID.match(parts[2]):
             return self.send_json({"error": "not found"}, 404)

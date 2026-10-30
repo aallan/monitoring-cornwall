@@ -11,8 +11,10 @@ Queries the Overpass API and writes simplified GeoJSON overlays to site/data/:
     stations.geojson   National Rail stations
     meta.json          when the snapshot was taken, and feature counts
 
-and data/places.json, the county's towns, villages and hamlets, which the
-station poller uses to name rain gauges.
+and, for the server only, data/places.json (the county's towns, villages and
+hamlets, used to name rain gauges) and data/neighbours.geojson (Devon and
+Plymouth, used to place offshore storm overflows on the right side of the
+Tamar).
 
 Standard library only. Run occasionally (``make data``; add ``--refresh`` to bypass the cache, or
 ``--cached`` to reprocess the cached downloads without fetching); the overlays change
@@ -477,6 +479,26 @@ def fetch_roads():
     return roads
 
 
+# Cornwall's neighbours across the Tamar, for deciding which county an
+# offshore storm overflow belongs to: Devon (county) and Plymouth (unitary).
+NEIGHBOURS_GSS = ("E10000008", "E06000026")
+
+
+def fetch_neighbours():
+    """Outer rings of the neighbouring authorities."""
+    els = overpass(
+        '[out:json][timeout:240];rel["ref:gss"~"^(' + "|".join(NEIGHBOURS_GSS) + ')$"];out geom;',
+        "neighbours")
+    polys = []
+    for rel in els:
+        outer = [m for m in rel.get("members", []) if m["type"] == "way" and m.get("role") in ("outer", "")]
+        for ring in assemble_rings(outer):
+            ring = simplify(ring, SIMPLIFY_BOUNDARY)
+            if len(ring) >= 4:
+                polys.append([rnd(ring)])
+    return [feature("MultiPolygon", polys, name="Devon and Plymouth")]
+
+
 def fetch_places():
     """Towns, villages and hamlets, used to name the rain gauges."""
     els = overpass(
@@ -503,6 +525,8 @@ def main():
     roads = fetch_roads()
     pause()
     places = fetch_places()
+    pause()
+    neighbours = fetch_neighbours()
 
     print("Writing overlays…")
     write("boundary.geojson", boundary)
@@ -512,6 +536,8 @@ def main():
     write("roads.geojson", roads)
     SERVER_DATA.mkdir(exist_ok=True)
     (SERVER_DATA / "places.json").write_text(json.dumps(places, ensure_ascii=False))
+    (SERVER_DATA / "neighbours.geojson").write_text(json.dumps(
+        {"type": "FeatureCollection", "features": neighbours}, separators=(",", ":")))
     print(f"  wrote data/places.json ({len(places)} places)")
     write("stations.geojson", stations)
     meta = {

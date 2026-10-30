@@ -307,5 +307,123 @@ const StationPopup = (() => {
       .openOn(map);
   }
 
-  return { open, summary, invalidate };
+  // Storm overflows ------------------------------------------------------------
+  const OVERFLOW_STATE = {
+    spilling: 'Spilling now', recent: 'Spilled in the last 48 hours',
+    quiet: 'Not spilling', offline: 'Monitor offline',
+  };
+
+  function fmtDay(ts) {
+    return new Date(ts * 1000).toLocaleDateString('en-GB', { timeZone: TZ, day: 'numeric', month: 'short', year: 'numeric' });
+  }
+
+  function fmtHours(h) {
+    if (h == null) return '—';
+    if (h < 1) return `${Math.round(h * 60)} min`;
+    return `${h.toLocaleString('en-GB', { maximumFractionDigits: h < 10 ? 1 : 0 })} h`;
+  }
+
+  // One line for tooltips.
+  function overflowSummary(o) {
+    if (o.state === 'spilling') return o.since ? `spilling since ${fmtTime(o.since)}` : 'spilling now';
+    if (o.state === 'offline') return 'monitor offline';
+    if (o.last_end) return `last spill ended ${fmtAgo(o.last_end)}`;
+    return 'no spills recorded';
+  }
+
+  // The last 30 days as a strip, one bar per spill.
+  function spillStrip(host, events, now) {
+    const from = now - 30 * 86400;
+    const SW = 320, SH = 46, L = 4, R = 4, T = 6, B = 16;
+    const svg = el('svg', { viewBox: `0 0 ${SW} ${SH}`, class: 'stn-chart', role: 'img',
+      'aria-label': `${events.length} spills recorded in the last 30 days` });
+    const x = t => L + (Math.max(t, from) - from) / (now - from) * (SW - L - R);
+    el('rect', { x: L, y: T, width: SW - L - R, height: SH - T - B, class: 'cso-strip-bg' }, svg);
+    for (const t of timeTicks(from, now, 28)) {
+      el('line', { x1: x(t), x2: x(t), y1: T, y2: SH - B, class: 'stn-grid' }, svg);
+      el('text', { x: x(t), y: SH - 4, 'text-anchor': 'middle', class: 'stn-axis' }, svg).textContent = tickLabel(t, 28);
+    }
+    for (const [start, end] of events) {
+      const x1 = x(start), x2 = x(end || now);
+      el('rect', { x: x1, y: T, width: Math.max(1.5, x2 - x1), height: SH - T - B, class: 'cso-strip-bar' }, svg);
+    }
+    host.appendChild(svg);
+  }
+
+  function annualBars(host, annual) {
+    const rows = annual.filter(a => a[1] != null);
+    if (!rows.length) return;
+    const SW = 320, SH = 92, L = 4, R = 4, T = 14, B = 16;
+    const max = Math.max(...rows.map(a => a[1]), 1);
+    const svg = el('svg', { viewBox: `0 0 ${SW} ${SH}`, class: 'stn-chart', role: 'img', 'aria-label': 'Spill hours per year' });
+    const slot = (SW - L - R) / rows.length;
+    rows.forEach(([year, hours, spills], i) => {
+      const h = (SH - T - B) * hours / max;
+      const cx = L + slot * i + slot / 2;
+      el('rect', { x: cx - slot * 0.3, y: SH - B - h, width: slot * 0.6, height: Math.max(h, 0.5), class: 'cso-year-bar' }, svg);
+      el('text', { x: cx, y: SH - B - h - 3, 'text-anchor': 'middle', class: 'stn-axis' }, svg).textContent = fmtHours(hours);
+      el('text', { x: cx, y: SH - 4, 'text-anchor': 'middle', class: 'stn-axis' }, svg).textContent =
+        spills != null ? `${year} · ${spills}` : String(year);
+    });
+    host.appendChild(svg);
+  }
+
+  function overflowContent(o) {
+    const box = node('div', 'stn-pop');
+    box.appendChild(node('div', 'stn-pop-title', o.name || `Storm overflow ${o.id}`));
+    const sub = node('div', 'stn-pop-sub', [o.water, 'Storm overflow'].filter(Boolean).join(' · '));
+    box.appendChild(sub);
+    const state = node('div', `stn-pop-state cso-state is-${o.state}`);
+    state.appendChild(node('span', 'stn-pop-dot'));
+    state.appendChild(document.createTextNode(OVERFLOW_STATE[o.state] || ''));
+    const when = o.state === 'spilling' || o.state === 'offline'
+      ? (o.since ? ` · since ${fmtTime(o.since)}` : '')
+      : (o.last_end ? ` · last spill ended ${fmtAgo(o.last_end)}` : '');
+    if (when) state.appendChild(node('span', 'stn-pop-when', when));
+    box.appendChild(state);
+
+    const body = node('div', 'cso-body loading');
+    box.appendChild(body);
+    const source = node('div', 'stn-pop-source', `South West Water monitor · permit ${o.id}`);
+    box.appendChild(source);
+
+    getJSON(`/api/overflows/${encodeURIComponent(o.id)}`).then(d => {
+      body.classList.remove('loading');
+      if (d.asset_type) sub.textContent = [o.water, d.asset_type].filter(Boolean).join(' · ');
+      const now = Math.floor(Date.now() / 1000);
+      const from = now - 30 * 86400;
+      const hours = d.events.reduce((sum, [s, e]) => sum + (Math.min(e || now, now) - Math.max(s, from)) / 3600, 0);
+
+      body.appendChild(node('div', 'cso-head', 'Last 30 days'));
+      const stats = node('div', 'cso-stats');
+      stats.appendChild(node('span', 'stn-pop-value', String(d.events.length)));
+      stats.appendChild(node('span', 'stn-pop-note', d.events.length === 1 ? 'spill' : 'spills'));
+      stats.appendChild(node('span', 'stn-pop-value', fmtHours(hours)));
+      stats.appendChild(node('span', 'stn-pop-note', 'spilling'));
+      body.appendChild(stats);
+      spillStrip(body, d.events, now);
+      if (d.log_started && d.log_started > from) {
+        body.appendChild(node('div', 'stn-pop-key', `Spills recorded here since ${fmtDay(d.log_started)}; earlier ones in this window aren't included.`));
+      }
+      if (d.annual.length) {
+        body.appendChild(node('div', 'cso-head', 'Spill hours per year, and number of spills'));
+        annualBars(body, d.annual);
+        body.appendChild(node('div', 'stn-pop-key', 'From the regulatory annual returns'));
+      }
+      if (d.last_seen) source.textContent = `South West Water monitor · permit ${o.id} · last report ${fmtAgo(d.last_seen)}`;
+    }).catch(() => {
+      body.classList.remove('loading');
+      body.textContent = 'Spill history is unavailable right now.';
+    });
+    return box;
+  }
+
+  function openOverflow(map, o) {
+    L.popup({ className: 'stn-popup', maxWidth: 360, minWidth: 320, autoPanPadding: [24, 24] })
+      .setLatLng([o.lat, o.lon])
+      .setContent(overflowContent(o))
+      .openOn(map);
+  }
+
+  return { open, summary, invalidate, openOverflow, overflowSummary };
 })();

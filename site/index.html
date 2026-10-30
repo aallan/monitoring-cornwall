@@ -7,7 +7,7 @@
   <meta name="description" content="Rivers, streams, railways and major roads of Cornwall on one map.">
   <link rel="icon" type="image/svg+xml" href="img/favicon.svg?v=1">
   <link rel="stylesheet" href="lib/leaflet/leaflet.css?v=1.9.4">
-  <link rel="stylesheet" href="css/style.css?v=14">
+  <link rel="stylesheet" href="css/style.css?v=16">
   <script src="js/utils.js?v=2"></script>
 </head>
 <body>
@@ -35,7 +35,7 @@
       <h2>About</h2>
       <div class="panel">
         <p>A map of Cornwall's rivers, streams, railways and major roads, drawn from OpenStreetMap, with live
-          readings from the Environment Agency's river level, tidal and rain gauges. Each river ends where it
+          readings from the Environment Agency's river level, tidal and rain gauges and South West Water's storm overflow monitors. Each river ends where it
           meets the dimmed water outside the county, rather than running down the middle of the estuary to the sea. The railways are the passenger and freight
           network; heritage lines aren't shown. The roads are the A30, A38 and A39.</p>
         <p>The code is open source, under the MIT licence, at
@@ -51,6 +51,8 @@
           <thead><tr><th>Layer</th><th>Source</th><th>Licence</th></tr></thead>
           <tbody>
             <tr><td>River, tidal and rain gauges</td><td>Environment Agency real-time flood-monitoring API, checked every 5 minutes. This uses Environment Agency flood and river level data from the real-time data API (Beta).</td><td><a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/" rel="noopener">Open Government Licence</a></td></tr>
+            <tr><td>Storm overflows</td><td>South West Water's storm overflow activity feed, checked every 5 minutes</td><td><a href="https://creativecommons.org/licenses/by/4.0/" rel="noopener">CC BY 4.0</a></td></tr>
+            <tr><td>Storm overflow annual totals</td><td>Event Duration Monitoring annual returns. © Environment Agency copyright and/or database right.</td><td><a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/" rel="noopener">Open Government Licence</a></td></tr>
             <tr><td>Boundary</td><td>OpenStreetMap relations 57537 (Cornwall) and 158039 (Isles of Scilly)</td><td><a href="https://www.openstreetmap.org/copyright" rel="noopener">ODbL</a></td></tr>
             <tr><td>Rivers and streams</td><td>OpenStreetMap <code>waterway=*</code> via the Overpass API</td><td><a href="https://www.openstreetmap.org/copyright" rel="noopener">ODbL</a></td></tr>
             <tr><td>Railways and stations</td><td>OpenStreetMap <code>railway=*</code> via the Overpass API</td><td><a href="https://www.openstreetmap.org/copyright" rel="noopener">ODbL</a></td></tr>
@@ -76,8 +78,8 @@
 </footer>
 
 <script src="lib/leaflet/leaflet.js?v=1.9.4"></script>
-<script src="js/stations.js?v=3"></script>
-<script src="js/map.js?v=10"></script>
+<script src="js/stations.js?v=4"></script>
+<script src="js/map.js?v=13"></script>
 <script src="js/app.js?v=6"></script>
 </body>
 </html>

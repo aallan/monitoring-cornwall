@@ -64,6 +64,24 @@ class LandMask:
                         return True
         return False
 
+    def distance_m(self, p, max_m):
+        """Distance in metres from p to the nearest boundary edge, searching
+        out to max_m; infinity if there is no edge that close."""
+        x, y = p
+        kx = 111_320 * math.cos(math.radians(y))
+        ky = 110_570
+        gx, gy = math.floor(x / self.CELL), math.floor(y / self.CELL)
+        rx = math.ceil(max_m / (self.CELL * kx)) or 1
+        ry = math.ceil(max_m / (self.CELL * ky)) or 1
+        best = math.inf
+        for dx in range(-rx, rx + 1):
+            for dy in range(-ry, ry + 1):
+                for a, b in self.cells.get((gx + dx, gy + dy), ()):
+                    pa = ((a[0] - x) * kx, (a[1] - y) * ky)
+                    pb = ((b[0] - x) * kx, (b[1] - y) * ky)
+                    best = min(best, perp_dist((0.0, 0.0), pa, pb))
+        return best if best <= max_m else math.inf
+
     def keep(self, p):
         return self.inside(p) or self.near_edge(p)
 

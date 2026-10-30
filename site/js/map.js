@@ -14,6 +14,7 @@ const CornwallMap = (() => {
   const MAJOR_LABEL_ZOOM = 9;    // long rivers labelled from here
   const RAIL_LABEL_ZOOM = 10;    // passenger line names from here
   const STREAM_MIN_ZOOM = 12;    // streams appear from here
+  const CSO_QUIET_ZOOM = 11;     // quiet and offline storm overflows appear from here
   const MINOR_LABEL_ZOOM = 11;   // shorter rivers and freight lines get labels from here
   const ARROW_MIN_ZOOM = 12;     // flow arrows appear from here
   const ARROW_SPACING_KM = 2.5;
@@ -41,10 +42,14 @@ const CornwallMap = (() => {
     levels:    { on: true },
     tidal:     { on: true },
     rain:      { on: true },
+    csoNow:    { on: true },
+    csoRecent: { on: true },
+    csoQuiet:  { on: true },
   };
   // Legend sections whose heading switches the whole group.
   const GROUPS = {
     live: ['levels', 'tidal', 'rain'],
+    overflows: ['csoNow', 'csoRecent', 'csoQuiet'],
     waterways: ['rivers', 'streams'],
     railways: ['passenger', 'freight', 'stations'],
     roads: ['roads'],
@@ -79,6 +84,8 @@ const CornwallMap = (() => {
     }
     const hint = $('#legend-streams-hint');
     if (hint) hint.textContent = zoom < STREAM_MIN_ZOOM ? 'zoom in' : '';
+    const quiet = $('#legend-cso-quiet-hint');
+    if (quiet) quiet.style.display = zoom < CSO_QUIET_ZOOM ? '' : 'none';
   }
 
   // ---------------------------------------------------------------- panes
@@ -165,6 +172,13 @@ const CornwallMap = (() => {
     return `${esc(name)}${sub ? `<span class="tip-sub">${esc(sub)}</span>` : ''}`;
   }
   const TIP_OPTS = { sticky: true, className: 'map-tip', direction: 'top', offset: [0, -8] };
+
+  // Marker size multiplier, read by the stylesheet as --mk: markers grow as
+  // the map zooms in, where there are fewer of them on screen at once.
+  const markerScale = z => (z >= 14 ? 2 : z >= 13 ? 1.75 : z >= 12 ? 1.5 : z >= 11 ? 1.3 : z >= 10 ? 1.15 : 1);
+  function sizeMarkers() {
+    map.getContainer().style.setProperty('--mk', markerScale(map.getZoom()));
+  }
 
   // Zoom-dependent line weight multiplier.
   const zoomScale = () => {
@@ -423,6 +437,47 @@ const CornwallMap = (() => {
     if (window.onLiveUpdate) window.onLiveUpdate(live);
   }
 
+  // Storm overflows: spilling now or recently shows at every zoom; quiet and
+  // offline overflows only once zoomed in, since there are hundreds of them.
+  const csoGroups = { now: L.layerGroup(), recent: L.layerGroup(), quiet: L.layerGroup() };
+  let csoRegistered = false;
+  const CSO_GROUP = { spilling: 'now', recent: 'recent', quiet: 'quiet', offline: 'quiet' };
+
+  function renderOverflows(data) {
+    if (!csoRegistered) {
+      addPart(csoGroups.quiet, 'csoQuiet', Z.markers, CSO_QUIET_ZOOM);
+      addPart(csoGroups.recent, 'csoRecent', Z.markers);
+      addPart(csoGroups.now, 'csoNow', Z.markers);
+      csoRegistered = true;
+    }
+    Object.values(csoGroups).forEach(g => g.clearLayers());
+    const counts = { now: 0, recent: 0, quiet: 0 };
+    for (const o of data.overflows) {
+      const group = CSO_GROUP[o.state];
+      if (!group) continue;
+      counts[group]++;
+      const icon = L.divIcon({
+        className: '', iconSize: [12, 12], iconAnchor: [6, 6],
+        html: `<span class="cso is-${esc(o.state)}"></span>`,
+      });
+      L.marker([o.lat, o.lon], { icon, title: o.name || o.id, riseOnHover: true,
+        zIndexOffset: group === 'now' ? 400 : group === 'recent' ? 200 : 0 })
+        .bindTooltip(tip(o.name || `Storm overflow ${o.id}`, StationPopup.overflowSummary(o)),
+          { ...TIP_OPTS, sticky: false, offset: [0, -8] })
+        .on('click', () => StationPopup.openOverflow(map, o))
+        .addTo(csoGroups[group]);
+    }
+    setCount('csoNow', counts.now);
+    setCount('csoRecent', counts.recent);
+    setCount('csoQuiet', counts.quiet);
+  }
+
+  function loadOverflows() {
+    return getJSON(DATA + 'overflows.json')
+      .then(d => { renderOverflows(d); updateVisibility(); })
+      .catch(e => console.warn('No storm overflow data:', e));
+  }
+
   function loadLive() {
     return getJSON(DATA + 'live.json')
       .then(live => { renderLive(live); updateVisibility(); })
@@ -458,6 +513,10 @@ const CornwallMap = (() => {
         ${item('levels', 'gauge level', '--level-normal', 'River levels', '<span class="count" id="legend-count-levels"></span>')}
         ${item('tidal', 'gauge tidal', '--tidal', 'Tidal levels', '<span class="count" id="legend-count-tidal"></span>')}
         ${item('rain', 'gauge rain', '--rain', 'Rain gauges', '<span class="count" id="legend-count-rain"></span>')}
+        ${title('overflows', 'Storm overflows')}
+        ${item('csoNow', 'cso-swatch is-spilling', '--cso', 'Spilling now', '<span class="count" id="legend-count-csoNow"></span>')}
+        ${item('csoRecent', 'cso-swatch is-recent', '--cso-recent', 'Spilled in last 48 h', '<span class="count" id="legend-count-csoRecent"></span>')}
+        ${item('csoQuiet', 'cso-swatch is-quiet', '--cso-quiet', 'Quiet or offline', '<span class="count"><span id="legend-cso-quiet-hint">zoom in · </span><span id="legend-count-csoQuiet"></span></span>')}
         ${title('waterways', 'Waterways')}
         ${item('rivers', 'line', '--water', 'Rivers', '<span class="count" id="legend-count-rivers"></span>')}
         ${item('streams', 'line thin', '--water-minor', 'Streams', '<span class="count" id="legend-streams-hint"></span>')}
@@ -524,18 +583,21 @@ const CornwallMap = (() => {
     map.attributionControl.setPrefix('<a href="https://leafletjs.com">Leaflet</a>');
     map.attributionControl.addAttribution('&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors');
     map.attributionControl.addAttribution('Readings: <a href="https://environment.data.gov.uk/flood-monitoring/doc/reference">Environment Agency</a>');
+    map.attributionControl.addAttribution('Overflows: <a href="https://www.arcgis.com/home/item.html?id=cabfce76b72a4a278a33d737c0708d42">South West Water</a>');
     map.setView([50.45, -4.95], 9, { animate: false });  // placeholder until the container has a size
     fitIfVisible();
     makePanes();
     setTiles();
 
     addLegend();
-    map.on('zoomend', () => { loadStreamsIfNeeded(); updateVisibility(); restylers.forEach(fn => fn()); });
+    map.on('zoomend', () => { loadStreamsIfNeeded(); sizeMarkers(); updateVisibility(); restylers.forEach(fn => fn()); });
+    sizeMarkers();
 
     // Each layer draws as soon as its file arrives; nothing waits for the
     // rest. Live readings are a single small file, so markers appear first.
     loadLive();
-    setInterval(loadLive, LIVE_REFRESH_MS);
+    loadOverflows();
+    setInterval(() => { loadLive(); loadOverflows(); }, LIVE_REFRESH_MS);
     const layer = (name, add) => getJSON(DATA + name)
       .then(fc => { add(fc); updateVisibility(); })
       .catch(e => console.warn(e));

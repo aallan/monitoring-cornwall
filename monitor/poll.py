@@ -11,7 +11,7 @@ import argparse
 import threading
 import time
 
-from . import db, ea, live
+from . import db, ea, live, overflows
 
 # Stations report every 15 minutes but not in step, and the EA publishes each
 # reading some minutes after it is taken, so polling more often than the
@@ -23,24 +23,50 @@ STATION_REFRESH = 24 * 3600
 def cycle():
     con = db.connect()
     try:
-        refreshed = int(db.get_meta(con, "stations_refreshed", 0))
-        if time.time() - refreshed > STATION_REFRESH:
-            n = ea.refresh_stations(con)
-            db.set_meta(con, "stations_refreshed", int(time.time()))
-            con.commit()
-            ea.log(f"station list refreshed: {n} stations")
-        # The latest readings go to the map first; filling gaps can take a
-        # while when several stations need their history fetched.
-        latest, held = ea.store_latest(con)
-        db.set_meta(con, "last_poll", int(time.time()))
-        con.commit()
-        live.write(con)
-        filled = ea.fill_gaps(con, latest, held)
-        if filled:
-            live.write(con)
-        ea.log(f"poll: {len(latest)} latest readings, {filled} series filled in")
+        # The two feeds are independent; a failure in one doesn't stop the other.
+        try:
+            poll_gauges(con)
+        except Exception as e:  # noqa: BLE001
+            ea.log(f"gauge poll failed: {e}")
+        try:
+            poll_overflows(con)
+        except Exception as e:  # noqa: BLE001
+            ea.log(f"overflow poll failed: {e}")
     finally:
         con.close()
+
+
+def poll_gauges(con):
+    refreshed = int(db.get_meta(con, "stations_refreshed", 0))
+    if time.time() - refreshed > STATION_REFRESH:
+        n = ea.refresh_stations(con)
+        db.set_meta(con, "stations_refreshed", int(time.time()))
+        con.commit()
+        ea.log(f"station list refreshed: {n} stations")
+    # The latest readings go to the map first; filling gaps can take a
+    # while when several stations need their history fetched.
+    latest, held = ea.store_latest(con)
+    db.set_meta(con, "last_poll", int(time.time()))
+    con.commit()
+    live.write(con)
+    filled = ea.fill_gaps(con, latest, held)
+    if filled:
+        live.write(con)
+    ea.log(f"gauges: {len(latest)} latest readings, {filled} series filled in")
+
+
+def poll_overflows(con):
+    refreshed = int(db.get_meta(con, "overflows_refreshed", 0))
+    if time.time() - refreshed > STATION_REFRESH:
+        n = overflows.refresh_overflows(con)
+        db.set_meta(con, "overflows_refreshed", int(time.time()))
+        if not db.get_meta(con, "overflow_log_started"):
+            db.set_meta(con, "overflow_log_started", int(time.time()))
+        con.commit()
+        ea.log(f"overflow list refreshed: {n} overflows")
+    n = overflows.poll_overflows(con)
+    overflows.write_summary(con)
+    ea.log(f"overflows: {n} statuses")
 
 
 def run_forever(stop=None):

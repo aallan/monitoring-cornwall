@@ -1,6 +1,6 @@
 # Monitoring Cornwall
 
-A map of Cornwall's rivers, streams, railways and major roads, built from [OpenStreetMap](https://www.openstreetmap.org/) data, with live readings from the Environment Agency's river level, tidal and rain gauges. It's a companion to [Floodwatch](https://github.com/aallan/floodwatch), which monitors the River Taw catchment in Devon at [tawriver.watch](https://tawriver.watch).
+A map of Cornwall's rivers, streams, railways and major roads, built from [OpenStreetMap](https://www.openstreetmap.org/) data, with live readings from the Environment Agency's river level, tidal and rain gauges and from South West Water's storm overflow monitors. It's a companion to [Floodwatch](https://github.com/aallan/floodwatch), which monitors the River Taw catchment in Devon at [tawriver.watch](https://tawriver.watch).
 
 The site is a single page with no framework and no build step. The server, the readings poller and the map data pipeline use only the Python standard library, with readings kept in SQLite.
 
@@ -16,6 +16,19 @@ Live readings come from the Environment Agency's [real-time flood-monitoring API
 
 A marker turns hollow when its station has sent nothing for three hours. Clicking one opens its latest reading and a chart of the last 24 hours, 7 days or 28 days. A river level's chart starts at zero and runs to 1.25 times the top of its typical range, or higher if the river has been higher in the last 28 days, with a dashed line at the top of the typical range and a dotted one at the record high when that fits. The axis stays the same across all three periods, so they compare by eye. Tidal charts fit the tides recorded, and rain is drawn as totals per 15 minutes, hour or day.
 
+Storm overflows come from South West Water's [storm overflow activity feed](https://www.arcgis.com/home/item.html?id=cabfce76b72a4a278a33d737c0708d42), which reports whether each overflow's Event Duration Monitor shows it spilling. There are 387 in the county, so the map shows them in tiers, in one purple shaded by state:
+
+| Marker | Meaning | Shown |
+|---|---|---|
+| Saturated, pulsing | Spilling now | At every zoom |
+| Medium | Spilled in the last 48 hours | At every zoom |
+| Pale | Quiet: no spill in the last 48 hours | From zoom 11 |
+| Hollow grey | Monitor offline | From zoom 11 |
+
+An overflow's popup shows its spills over the last 30 days as a timeline, and its spill hours and spill count for each year from the regulatory [annual returns](https://www.arcgis.com/home/item.html?id=66fef44a4aab438991d7ce08fbc1de64).
+
+All of these markers grow as the map zooms in.
+
 The rest of the map comes from OpenStreetMap.
 
 | Layer | OpenStreetMap source | Notes |
@@ -28,7 +41,7 @@ The rest of the map comes from OpenStreetMap.
 | Stations | `railway=station` and `railway=halt` | National Rail stations, each with its CRS code |
 | Major roads | `highway=trunk`, `primary` or `motorway` with a one- or two-digit A-road `ref` | The A30, A38 and A39, labelled with their numbers. Slip roads are left out |
 
-Every layer is on by default. Hovering over a river, line, road or station shows its name. Each row in the legend switches its layer on and off, and each section heading (Live readings, Waterways, Railways, Roads) switches the whole section. The page follows the system's light or dark setting, with a toggle to override it.
+Every layer is on by default. Hovering over a river, line, road or station shows its name. Each row in the legend switches its layer on and off, and each section heading (Live readings, Storm overflows, Waterways, Railways, Roads) switches the whole section. The page follows the system's light or dark setting, with a toggle to override it.
 
 ## Running it
 
@@ -71,6 +84,14 @@ Readings are kept indefinitely. 28 days of readings from all the county's statio
 
 Every 5 minutes it makes one request per kind of reading for the latest value from every station in England, keeps Cornwall's, and writes `site/data/live.json`, about 25 KB with every station's latest reading and state, which is everything the map needs to draw its markers. Then it fills gaps. A station whose newest reading is more than 15 minutes ahead of what was stored has missed readings, because the server was down or because the station uploads in batches, so its history is fetched from its last stored reading, four stations at a time. `live.json` is written again once the gaps are filled. A station's history is fetched from `/api/` only when its popup opens.
 
+## How storm overflows are collected
+
+The overflow feed reports each overflow's current state and only its most recent spill, so the spill history is built up by polling. Every 5 minutes the poller reads all of South West Water's overflows in one request, about 380 KB, and for each of Cornwall's compares the latest spill with the last one stored. A new start time is a new spill, and the same start time with the overflow now quiet closes the open one. A spill that starts and ends entirely between two polls is still caught, because the feed keeps it as the latest event until the next one, but if two spills happen between polls the earlier is missed. The log starts when the server first runs, so the 30-day panel fills in over its first month. After each poll the server writes `site/data/overflows.json`, about 60 KB, for the markers; an overflow's log and yearly totals come from `/api/overflows/<id>` when its popup opens.
+
+An overflow counts as Cornish if it's inside the county boundary. Outfalls often sit offshore, beyond the low-water line, so one outside the boundary still counts if it's within 3 km of it and nearer to Cornwall than to Devon or Plymouth. That takes in the outfalls in Cawsand Bay and on the Cornish side of the Tamar, and leaves out Plymouth's. Once a day the poller refreshes the list, and reads names, asset types and yearly totals from the annual returns, matching rows to overflows by permit ID.
+
+## How the map loads
+
 Each layer of the map draws as soon as its file arrives, without waiting for the others. Streams, the largest overlay, load the first time the map is zoomed in far enough to show them.
 
 ## How the overlays are built
@@ -92,14 +113,15 @@ serve.py                  HTTP server for site/ and /api/, and the poller thread
 monitor/ea.py             Environment Agency client: stations, latest readings, history
 monitor/poll.py           the 5-minute poll cycle
 monitor/live.py           writes site/data/live.json
+monitor/overflows.py      South West Water storm overflows: list, spill log, annual totals
 monitor/db.py             SQLite schema and connection
 monitor/geo.py            boundary geometry shared with the overlay builder
-scripts/fetch_geodata.py  OpenStreetMap to site/data/*.geojson, and data/places.json
+scripts/fetch_geodata.py  OpenStreetMap to site/data/*.geojson, data/places.json and data/neighbours.geojson
 libs.sha256               checksums for the downloaded Leaflet files
 site/index.html           the page
 site/css/style.css        layout and theme, light and dark
 site/js/map.js            basemap, boundary mask, overlays, station markers and legend
-site/js/stations.js       station popups and their charts
+site/js/stations.js       station and overflow popups and their charts
 site/js/app.js            tab routing and the status line
 site/js/utils.js          escaping, formatting and the theme toggle
 ```
@@ -112,4 +134,4 @@ Bug reports, corrections and pull requests are welcome; [CONTRIBUTING.md](CONTRI
 
 The code is released under the [MIT licence](LICENSE).
 
-The map data is © OpenStreetMap contributors, available under the [Open Database Licence](https://www.openstreetmap.org/copyright). This uses Environment Agency flood and river level data from the real-time data API (Beta), available under the [Open Government Licence](https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/). Basemap tiles are © [Esri](https://www.esri.com/). [Leaflet](https://leafletjs.com/) is released under the BSD 2-Clause licence.
+The map data is © OpenStreetMap contributors, available under the [Open Database Licence](https://www.openstreetmap.org/copyright). This uses Environment Agency flood and river level data from the real-time data API (Beta), available under the [Open Government Licence](https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/). Storm overflow activity is © South West Water, under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), and the overflow annual returns are © Environment Agency copyright and/or database right, under the Open Government Licence. Basemap tiles are © [Esri](https://www.esri.com/). [Leaflet](https://leafletjs.com/) is released under the BSD 2-Clause licence.
