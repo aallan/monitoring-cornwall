@@ -4,6 +4,20 @@ import math
 from collections import defaultdict
 
 
+# A box around Cornwall, Scilly and their waters. Coordinates from the feeds
+# are checked against it before any geometry runs.
+REGION = {"lat": (49.5, 51.5), "lon": (-7.0, -3.5)}
+
+
+def in_region(lat, lon):
+    """True for real numbers inside REGION; False for anything else."""
+    if not all(isinstance(v, (int, float)) and not isinstance(v, bool) for v in (lat, lon)):
+        return False
+    return (math.isfinite(lat) and math.isfinite(lon)
+            and REGION["lat"][0] <= lat <= REGION["lat"][1]
+            and REGION["lon"][0] <= lon <= REGION["lon"][1])
+
+
 def perp_dist(p, a, b):
     (x, y), (x1, y1), (x2, y2) = p, a, b
     dx, dy = x2 - x1, y2 - y1
@@ -23,6 +37,21 @@ class LandMask:
     """
 
     CELL = 0.002  # degrees, ~140 m east-west and ~220 m north-south here
+    # The widest search allowed, in cells either side: about 7 km east-west
+    # at Cornwall's latitude. Keeps a bad coordinate (one near a pole, where
+    # a degree of longitude shrinks towards nothing) from turning a distance
+    # search into an endless loop.
+    MAX_REACH = 50
+
+    def _reach(self, metres, y):
+        """Cells to search either side of a point to cover `metres`."""
+        kx = 111_320 * math.cos(math.radians(y))
+        ky = 110_570
+        if not (math.isfinite(kx) and kx > 1):
+            return 0, 0, kx, ky
+        rx = min(self.MAX_REACH, math.ceil(metres / (self.CELL * kx)) or 1)
+        ry = min(self.MAX_REACH, math.ceil(metres / (self.CELL * ky)) or 1)
+        return rx, ry, kx, ky
 
     def __init__(self, rings, tol_m):
         self.tol_m = tol_m
@@ -41,6 +70,8 @@ class LandMask:
 
     def inside(self, p):
         x, y = p
+        if not (math.isfinite(x) and math.isfinite(y)):
+            return False
         crossings = 0
         for (x1, y1), (x2, y2) in self.rows.get(math.floor(y / self.CELL), ()):
             if (y1 > y) != (y2 > y) and x < x1 + (y - y1) * (x2 - x1) / (y2 - y1):
@@ -49,12 +80,11 @@ class LandMask:
 
     def near_edge(self, p):
         x, y = p
-        kx = 111_320 * math.cos(math.radians(y))  # metres per degree
-        ky = 110_570
-        gx, gy = math.floor(x / self.CELL), math.floor(y / self.CELL)
+        if not (math.isfinite(x) and math.isfinite(y)):
+            return False
         # Search every cell the tolerance can reach, not just the neighbours.
-        rx = math.ceil(self.tol_m / (self.CELL * kx)) or 1
-        ry = math.ceil(self.tol_m / (self.CELL * ky)) or 1
+        rx, ry, kx, ky = self._reach(self.tol_m, y)
+        gx, gy = math.floor(x / self.CELL), math.floor(y / self.CELL)
         for dx in range(-rx, rx + 1):
             for dy in range(-ry, ry + 1):
                 for a, b in self.cells.get((gx + dx, gy + dy), ()):
@@ -68,11 +98,10 @@ class LandMask:
         """Distance in metres from p to the nearest boundary edge, searching
         out to max_m; infinity if there is no edge that close."""
         x, y = p
-        kx = 111_320 * math.cos(math.radians(y))
-        ky = 110_570
+        if not (math.isfinite(x) and math.isfinite(y)):
+            return math.inf
+        rx, ry, kx, ky = self._reach(max_m, y)
         gx, gy = math.floor(x / self.CELL), math.floor(y / self.CELL)
-        rx = math.ceil(max_m / (self.CELL * kx)) or 1
-        ry = math.ceil(max_m / (self.CELL * ky)) or 1
         best = math.inf
         for dx in range(-rx, rx + 1):
             for dy in range(-ry, ry + 1):

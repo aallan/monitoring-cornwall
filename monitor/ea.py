@@ -16,7 +16,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
 
-from .geo import LandMask
+from .geo import LandMask, in_region
 
 API = "https://environment.data.gov.uk/flood-monitoring"
 USER_AGENT = "monitoring-cornwall/0.1 (+https://github.com/aallan/monitoring-cornwall)"
@@ -154,7 +154,7 @@ def coords(station):
     lat, lon = station.get("lat"), station.get("long")
     if isinstance(lat, list):
         lat, lon = lat[0], lon[0]
-    return (lat, lon) if isinstance(lat, (int, float)) and isinstance(lon, (int, float)) else None
+    return (lat, lon) if in_region(lat, lon) else None
 
 
 def stage_scale(ref):

@@ -20,7 +20,7 @@ from pathlib import Path
 
 from . import db
 from .ea import USER_AGENT, log
-from .geo import LandMask
+from .geo import LandMask, in_region
 
 LIVE_URL = ("https://services-eu1.arcgis.com/OMdMOtfhATJPcHe3/arcgis/rest/services/"
             "NEH_outlets_PROD/FeatureServer/0/query")
@@ -157,7 +157,7 @@ def refresh_overflows(con):
     seen = []
     for s in fetch_live():
         lat, lon = s.get("latitude"), s.get("longitude")
-        if not s.get("Id") or not isinstance(lat, (int, float)) or not belongs(lon, lat):
+        if not s.get("Id") or not in_region(lat, lon) or not belongs(lon, lat):
             continue
         con.execute(
             """INSERT INTO overflows (id, water, lat, lon, active, updated) VALUES (?, ?, ?, ?, 1, ?)
