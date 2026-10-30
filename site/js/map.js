@@ -651,6 +651,8 @@ const CornwallMap = (() => {
 
     addLegend();
     legendReady = true;
+    fitLegend();
+    map.on('resize', fitLegend);
     drawFloods();
     map.on('zoomend', () => { loadStreamsIfNeeded(); sizeMarkers(); updateVisibility(); restylers.forEach(fn => fn()); });
     sizeMarkers();
@@ -705,7 +707,15 @@ const CornwallMap = (() => {
 
   function resize() {
     if (!map) return;
-    setTimeout(() => { map.invalidateSize(); fitIfVisible(); }, 0);
+    setTimeout(() => { map.invalidateSize(); fitIfVisible(); fitLegend(); }, 0);
+  }
+
+  // Keep the legend clear of the zoom buttons: no taller than the map, less
+  // the zoom control and the margins around both.
+  const LEGEND_CLEARANCE = 100;
+  function fitLegend() {
+    const legend = map && map.getContainer().querySelector('.map-legend');
+    if (legend) legend.style.setProperty('--legend-max', `${Math.max(120, map.getSize().y - LEGEND_CLEARANCE)}px`);
   }
 
   // `map` is exposed read-only for debugging from the console.
