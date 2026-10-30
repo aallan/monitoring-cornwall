@@ -21,7 +21,7 @@ from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-from monitor import db, overflows, poll
+from monitor import db, forecast, overflows, poll
 
 SITE = Path(__file__).resolve().parent / "site"
 DEFAULT_PORT = 8090
@@ -89,6 +89,27 @@ class Handler(SimpleHTTPRequestHandler):
             finally:
                 con.close()
             return self.send_json(found) if found else self.send_json({"error": "no such overflow"}, 404)
+        # /api/forecast/rain/<station id>: the next 48 hours at a rain gauge
+        if len(parts) == 4 and parts[:3] == ["api", "forecast", "rain"] and STATION_ID.match(parts[3]):
+            con = db.connect(read_only=True)
+            try:
+                s = con.execute("SELECT lat, lon FROM stations WHERE id = ? AND kind = 'rain'", (parts[3],)).fetchone()
+            finally:
+                con.close()
+            if s is None:
+                return self.send_json({"error": "no such rain gauge"}, 404)
+            try:
+                return self.send_json(forecast.rain(s["lat"], s["lon"]))
+            except Exception:  # noqa: BLE001 - the popup says the forecast is unavailable
+                return self.send_json({"error": "forecast unavailable"}, 502)
+        # /api/forecast/flow/<station id>: modelled river flow at a level gauge
+        if len(parts) == 4 and parts[:3] == ["api", "forecast", "flow"] and STATION_ID.match(parts[3]):
+            if parts[3] not in forecast.FLOW_OUTLETS:
+                return self.send_json({"error": "no flow forecast for this gauge"}, 404)
+            try:
+                return self.send_json(forecast.flow(parts[3]))
+            except Exception:  # noqa: BLE001 - the popup says the forecast is unavailable
+                return self.send_json({"error": "forecast unavailable"}, 502)
         # /api/stations/<id>/readings?days=N
         if len(parts) != 4 or parts[:2] != ["api", "stations"] or parts[3] != "readings" \
                 or not STATION_ID.match(parts[2]):

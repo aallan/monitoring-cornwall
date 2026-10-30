@@ -10,24 +10,34 @@ import os
 import time
 from pathlib import Path
 
+from .forecast import FLOW_OUTLETS
+
 ROOT = Path(__file__).resolve().parent.parent
 LIVE = ROOT / "site" / "data" / "live.json"
 
 STALE_AFTER = 3 * 3600     # a reading older than this is shown as out of date
-TREND_WINDOW = 3600        # compare with the reading about an hour earlier
-TREND_THRESHOLD = 0.02     # metres; smaller changes count as steady
+TREND_WINDOW = 3600        # the trend is fitted to the last hour of readings
+TREND_MIN_READINGS = 3
+TREND_THRESHOLD = 0.01     # metres per hour; a gentler slope counts as steady
 
 
-def _trend(con, measure, ts, value):
-    row = con.execute(
-        "SELECT value FROM readings WHERE measure = ? AND ts <= ? ORDER BY ts DESC LIMIT 1",
-        (measure, ts - TREND_WINDOW)).fetchone()
-    if row is None:
+def _trend(con, measure, ts):
+    """Rising, falling or steady, from a straight line fitted through the last
+    hour of readings, so it follows the chart's line; None with too few."""
+    rows = con.execute("SELECT ts, value FROM readings WHERE measure = ? AND ts > ? AND ts <= ? ORDER BY ts",
+                       (measure, ts - TREND_WINDOW, ts)).fetchall()
+    if len(rows) < TREND_MIN_READINGS:
         return None
-    change = value - row["value"]
-    if change > TREND_THRESHOLD:
+    hours = [(r["ts"] - ts) / 3600 for r in rows]
+    values = [r["value"] for r in rows]
+    mh, mv = sum(hours) / len(hours), sum(values) / len(values)
+    spread = sum((h - mh) ** 2 for h in hours)
+    if spread == 0:
+        return None
+    slope = sum((h - mh) * (v - mv) for h, v in zip(hours, values)) / spread
+    if slope > TREND_THRESHOLD:
         return "rising"
-    if change < -TREND_THRESHOLD:
+    if slope < -TREND_THRESHOLD:
         return "falling"
     return "steady"
 
@@ -57,9 +67,11 @@ def build(con, now=None):
             entry["state"] = "stale" if stale else ("raining" if entry["h1"] > 0 else "dry")
         else:
             entry["value"] = round(value, 3)
-            entry["trend"] = _trend(con, s["measure"], ts, value)
+            entry["trend"] = _trend(con, s["measure"], ts)
             if s["kind"] == "level":
                 entry["typical"] = [s["typical_low"], s["typical_high"]]
+                if s["id"] in FLOW_OUTLETS:
+                    entry["flow"] = True  # the popup offers a river flow forecast
                 if stale:
                     entry["state"] = "stale"
                 elif s["typical_high"] is not None and value > s["typical_high"]:

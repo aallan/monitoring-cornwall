@@ -433,7 +433,9 @@ const CornwallMap = (() => {
       counts[s.kind]++;
       const icon = L.divIcon({
         className: '', iconSize: [14, 14], iconAnchor: [7, 7],
-        html: `<span class="stn stn-${s.kind} is-${esc(s.state)}"></span>`,
+        // River and tidal gauges carry a small badge for their trend.
+        html: `<span class="stn stn-${s.kind} is-${esc(s.state)}"></span>` +
+          (s.trend && s.state !== 'stale' ? `<span class="trend for-${s.kind} is-${esc(s.trend)}"></span>` : ''),
       });
       L.marker([s.lat, s.lon], { icon, title: s.name, riseOnHover: true })
         .bindTooltip(tip(s.name, StationPopup.summary(s)), { ...TIP_OPTS, sticky: false, offset: [0, -10] })
@@ -587,6 +589,11 @@ const CornwallMap = (() => {
         ${item('levels', 'gauge level', '--level-normal', 'River levels', '<span class="count" id="legend-count-levels"></span>')}
         ${item('tidal', 'gauge tidal', '--tidal', 'Tidal levels', '<span class="count" id="legend-count-tidal"></span>')}
         ${item('rain', 'gauge rain', '--rain', 'Rain gauges', '<span class="count" id="legend-count-rain"></span>')}
+        <div class="legend-key" aria-label="Trend badges on river and tidal gauges">
+          <span class="trend-key is-rising"></span>rising
+          <span class="trend-key is-falling"></span>falling
+          <span class="trend-key is-steady"></span>steady
+        </div>
         ${title('overflows', 'Storm overflows')}
         ${item('csoNow', 'cso-swatch is-spilling', '--cso', 'Spilling now', '<span class="count" id="legend-count-csoNow"></span>')}
         ${item('csoRecent', 'cso-swatch is-recent', '--cso-recent', 'Spilled in last 48 h', '<span class="count" id="legend-count-csoRecent"></span>')}
@@ -662,6 +669,7 @@ const CornwallMap = (() => {
     map.attributionControl.addAttribution('&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors');
     map.attributionControl.addAttribution('Readings: <a href="https://environment.data.gov.uk/flood-monitoring/doc/reference">Environment Agency</a>');
     map.attributionControl.addAttribution('Overflows: <a href="https://www.arcgis.com/home/item.html?id=cabfce76b72a4a278a33d737c0708d42">South West Water</a>');
+    map.attributionControl.addAttribution('Forecasts: <a href="https://open-meteo.com/">Open-Meteo</a>, <a href="https://nrfa.ceh.ac.uk/">NRFA</a>');
     map.setView([50.45, -4.95], 9, { animate: false });  // placeholder until the container has a size
     makePanes();
     setTiles();

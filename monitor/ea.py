@@ -116,20 +116,21 @@ def measure_list(station):
     return ms if isinstance(ms, list) else [ms]
 
 
-def pick_measure(station, parameter):
+def pick_measure(station, parameter, reporting=frozenset()):
     """Choose the one series a station shows, and what kind of station it is.
 
+    Some stations list an old series beside its replacement; a series in
+    `reporting` (those with a recent reading) wins over one that isn't.
     Returns (kind, notation, unit), or None if the station has nothing we show.
     """
     ms = measure_list(station)
 
     def find(qualifier, units):
-        for unit in units:
-            for m in ms:
-                if (m.get("parameter") == parameter and m.get("qualifier") == qualifier
-                        and m.get("unitName") == unit and m.get("period") == 900):
-                    return m["@id"].rsplit("/", 1)[-1], unit
-        return None
+        found = [(m["@id"].rsplit("/", 1)[-1], m["unitName"]) for m in ms
+                 if m.get("parameter") == parameter and m.get("qualifier") == qualifier
+                 and m.get("unitName") in units and m.get("period") == 900]
+        found.sort(key=lambda f: (f[0] not in reporting, units.index(f[1])))
+        return found[0] if found else None
 
     if parameter == "rainfall":
         for m in ms:
@@ -143,6 +144,14 @@ def pick_measure(station, parameter):
     if tidal:
         return ("tidal",) + tidal
     return None
+
+
+def reporting_measures(parameter, within=7 * 86400):
+    """The series with a reading in the last week, from the national latest readings."""
+    cutoff = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(time.time() - within))
+    return frozenset(r["measure"].rsplit("/", 1)[-1]
+                     for r in get("/data/readings", {"latest": "", "parameter": parameter})["items"]
+                     if r.get("measure") and (r.get("dateTime") or "") >= cutoff)
 
 
 def in_service(station):
@@ -178,13 +187,14 @@ def refresh_stations(con):
     now = int(time.time())
     seen = []
     for parameter in ("level", "rainfall"):
+        reporting = reporting_measures(parameter)
         items = get("/id/stations", {"parameter": parameter, "lat": CENTRE[0], "long": CENTRE[1],
                                      "dist": RADIUS_KM, "_limit": 2000})["items"]
         for s in items:
             ref, at = s.get("stationReference"), coords(s)
             if not ref or not at or not in_service(s) or not land.keep((at[1], at[0])):
                 continue
-            picked = pick_measure(s, parameter)
+            picked = pick_measure(s, parameter, reporting)
             if not picked:
                 continue
             kind, measure, unit = picked

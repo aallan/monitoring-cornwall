@@ -471,6 +471,12 @@ footer { width: 100%; padding: 0 2rem 1.5rem; }
 .stn-line-level { stroke: var(--water); }
 .stn-line-tidal { stroke: var(--tidal); }
 .stn-bar { fill: var(--rain); }
+.stn-bar-forecast { fill: var(--tidal); }  /* amber for forecasts, as on Floodwatch */
+.stn-line-forecast { stroke: var(--tidal); }
+.stn-band { fill: var(--tidal); opacity: 0.2; }
+.stn-ref-normal { stroke: var(--text-tertiary); stroke-dasharray: 1 3; }
+.stn-today { stroke: var(--text-secondary); stroke-width: 1; stroke-dasharray: 3 2; }
+.stn-today-label { fill: var(--text-secondary); font-size: 9px; font-family: var(--font); }
 .stn-cursor { stroke: var(--text-tertiary); stroke-width: 1; stroke-dasharray: 2 2; }
 .stn-chart-empty { fill: var(--text-tertiary); font-size: 11px; font-family: var(--font); }
 
@@ -577,3 +583,39 @@ footer { width: 100%; padding: 0 2rem 1.5rem; }
     .flood-pill { padding: 0; width: 2.25rem; height: 2.25rem; justify-content: center; }
     .flood-pill-text { display: none; }
 }
+
+/* ---------- Trend badges ---------- */
+/* A small badge at the bottom right of a river or tidal gauge: red rising,
+   green falling, grey steady. Sized, like the marker, by --mk. */
+.trend {
+    --size: 14px;
+    position: absolute; left: 50%; top: 50%; box-sizing: border-box;
+    width: calc(9px * var(--mk, 1)); height: calc(9px * var(--mk, 1));
+    transform: translate(calc(var(--size) * var(--mk, 1) * 0.5 - 45%), calc(var(--size) * var(--mk, 1) * 0.5 - 45%));
+    border-radius: 50%; border: 1px solid var(--station-fill); pointer-events: none;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: calc(7px * var(--mk, 1)); font-weight: 700; line-height: 1;
+    transition: width 0.2s, height 0.2s;
+}
+.trend.for-tidal { --size: 13px; }
+.trend.is-rising, .trend-key.is-rising { background: var(--level-high); }
+.trend.is-falling, .trend-key.is-falling { background: var(--level-normal); }
+.trend.is-steady, .trend-key.is-steady { background: var(--level-unknown); }
+.trend.is-rising::after, .trend-key.is-rising::after { content: '↑'; }
+.trend.is-falling::after, .trend-key.is-falling::after { content: '↓'; }
+.trend.is-steady::after, .trend-key.is-steady::after { content: '→'; }
+
+.legend-key {
+    display: flex; align-items: center; gap: 0.3rem; flex-wrap: wrap;
+    font-size: 0.72rem; color: var(--text-tertiary); padding: 0.1rem 0.1rem 0.15rem 1.85rem;
+}
+.trend-key {
+    width: 12px; height: 12px; border-radius: 50%; color: #fff; font-size: 8px; font-weight: 700;
+    display: inline-flex; align-items: center; justify-content: center; margin-left: 0.25rem;
+}
+.trend-key:first-child { margin-left: 0; }
+
+.stn-pop-trend { font-size: 0.8rem; font-weight: 500; }
+.stn-pop-trend.is-rising { color: var(--level-high); }
+.stn-pop-trend.is-falling { color: var(--level-normal); }
+.stn-pop-trend.is-steady { color: var(--text-secondary); }

@@ -19,6 +19,7 @@ Monitoring Cornwall is a map with read-only live data. Visitors can't submit any
 
 - `serve.py`, which serves files from `site/` only, refuses directory listings, and binds to `localhost` unless told otherwise
 - the `/api/stations/<id>/readings` and `/api/overflows/<id>` endpoints, which validate the ID against a fixed pattern, cap the history they return, and read the database through a query-only connection
+- the `/api/forecast/rain/<id>` and `/api/forecast/flow/<id>` endpoints, which validate the ID, answer only for known rain gauges and the fixed list of flow outlets, and send the server's own request to Open-Meteo and the National River Flow Archive, with results cached in memory
 - the poller, which reads gauge readings, flood warnings and flood area outlines from the Environment Agency's public API and overflow data from South West Water's public feeds, and writes to `data/monitor.db`
 - the Content Security Policy sent with every response, which allows scripts and data only from the site's own origin, images from that origin and the basemap tile server, and inline styles, which Leaflet uses to position the map
 - rendering of OpenStreetMap, Environment Agency and South West Water names in the page, which are escaped or set as text before they reach the DOM
@@ -31,6 +32,7 @@ Monitoring Cornwall is a map with read-only live data. Visitors can't submit any
 - The Overpass API servers
 - The Environment Agency's flood-monitoring API
 - South West Water's storm overflow feed and the annual returns dataset
+- Open-Meteo's forecast and flood APIs, and the National River Flow Archive's API
 - Esri's basemap tile service
 - Vulnerabilities in Leaflet itself; report those to the [Leaflet project](https://github.com/Leaflet/Leaflet/security)
 - The configuration of any reverse proxy or server that someone runs this behind

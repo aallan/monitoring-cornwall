@@ -16,7 +16,9 @@ Live readings come from the Environment Agency's [real-time flood-monitoring API
 | Tidal levels | Amber diamond | Height in metres above Ordnance Datum where the station reports it |
 | Rain gauges | Drop | Filled when rain fell in the last hour. Gauges are named after the nearest village |
 
-A marker turns hollow when its station has sent nothing for three hours. Clicking one opens its latest reading and a chart of the last 24 hours, 7 days or 28 days. A river level's chart starts at zero and runs to 1.25 times the top of its typical range, or higher if the river has been higher in the last 28 days, with a dashed line at the top of the typical range and a dotted one at the record high when that fits. The axis stays the same across all three periods, so they compare by eye. Tidal charts fit the tides recorded, and rain is drawn as totals per 15 minutes, hour or day.
+River and tidal markers carry a small arrow when the level is rising or falling, from a straight line fitted to the last hour's readings; a change of less than 1 cm an hour counts as steady. A marker turns hollow when its station has sent nothing for three hours. Clicking one opens its latest reading and a chart of the last 24 hours, 7 days or 28 days. A river level's chart starts at zero and runs to 1.25 times the top of its typical range, or higher if the river has been higher in the last 28 days, with a dashed line at the top of the typical range and a dotted one at the record high when that fits. The axis stays the same across all three periods, so they compare by eye. Tidal charts fit the tides recorded, and rain is drawn as totals per 15 minutes, hour or day.
+
+Rain gauges add the next 48 hours of forecast rain, hour by hour, from [Open-Meteo](https://open-meteo.com/). The level gauges at Gunnislake on the Tamar, Pillaton on the Lynher, Restormel on the Fowey and Sladesbridge on the Camel add a river flow forecast: daily flow for the past week and the next fortnight, with the spread of the forecast ensemble, against the river's normal and high flows.
 
 Storm overflows come from South West Water's [storm overflow activity feed](https://www.arcgis.com/home/item.html?id=cabfce76b72a4a278a33d737c0708d42), which reports whether each overflow's Event Duration Monitor shows it spilling. There are 387 in the county, so the map shows them in tiers, in one purple shaded by state:
 
@@ -72,7 +74,7 @@ python3 scripts/fetch_geodata.py --cached    # rebuild from the cache, however o
 
 Monitoring Cornwall runs as one self-contained process on a single server, and its data lives there with it. Nothing generated is committed to this repository: Leaflet and the map overlays are built on the machine that serves the site, by `make libs` and `make data`, and readings collect in `data/monitor.db`.
 
-`serve.py` is a small threaded HTTP server. It serves `site/`, answers `/api/stations/<id>/readings?days=N` from the database, and polls the Environment Agency in a background thread; `--no-poll` turns the poller off where something else runs `python3 -m monitor.poll`. It binds to `localhost` on port 8090 by default; `--bind` and a port argument change both.
+`serve.py` is a small threaded HTTP server. It serves `site/`, answers `/api/stations/<id>/readings?days=N` from the database and `/api/forecast/rain/<id>` and `/api/forecast/flow/<id>` from Open-Meteo, and polls the Environment Agency in a background thread; `--no-poll` turns the poller off where something else runs `python3 -m monitor.poll`. It binds to `localhost` on port 8090 by default; `--bind` and a port argument change both.
 
 ```bash
 python3 serve.py 8090 --bind ::
@@ -84,7 +86,7 @@ Readings are kept indefinitely. 28 days of readings from all the county's statio
 
 ## How live readings are collected
 
-`monitor/` holds the server-side code. Once a day the poller lists the Environment Agency's level and rainfall stations within 110 km of the county, keeps those inside the county boundary or within 1.5 km of it (so the gauges on both banks of the Tamar are included), and reads each river station's published typical range. Stations that have reported nothing in 28 days are left off the map.
+`monitor/` holds the server-side code. Once a day the poller lists the Environment Agency's level and rainfall stations within 110 km of the county, keeps those inside the county boundary or within 1.5 km of it (so the gauges on both banks of the Tamar are included), and reads each river station's published typical range. Stations that have reported nothing in 28 days are left off the map. Some stations list an old series beside the one that replaced it, and the poller uses whichever has a reading in the last week.
 
 Every 5 minutes it makes one request per kind of reading for the latest value from every station in England, keeps Cornwall's, and writes `site/data/live.json`, about 25 KB with every station's latest reading and state, which is everything the map needs to draw its markers. Then it fills gaps. A station whose newest reading is more than 15 minutes ahead of what was stored has missed readings, because the server was down or because the station uploads in batches, so its history is fetched from its last stored reading, four stations at a time. `live.json` is written again once the gaps are filled. A station's history is fetched from `/api/` only when its popup opens.
 
@@ -97,6 +99,14 @@ Once a day the poller lists the Environment Agency's flood areas within 110 km o
 The overflow feed reports each overflow's current state and only its most recent spill, so the spill history is built up by polling. Every 5 minutes the poller reads all of South West Water's overflows in one request, about 380 KB, and for each of Cornwall's compares the latest spill with the last one stored. A new start time is a new spill, and the same start time with the overflow now quiet closes the open one. A spill that starts and ends entirely between two polls is still caught, because the feed keeps it as the latest event until the next one, but if two spills happen between polls the earlier is missed. The log starts when the server first runs, so the 30-day panel fills in over its first month. After each poll the server writes `site/data/overflows.json`, about 60 KB, for the markers; an overflow's log and yearly totals come from `/api/overflows/<id>` when its popup opens.
 
 An overflow counts as Cornish if it's inside the county boundary. Outfalls often sit offshore, beyond the low-water line, so one outside the boundary still counts if it's within 3 km of it and nearer to Cornwall than to Devon or Plymouth. That takes in the outfalls in Cawsand Bay and on the Cornish side of the Tamar, and leaves out Plymouth's. Once a day the poller refreshes the list, and reads names, asset types and yearly totals from the annual returns, matching rows to overflows by permit ID.
+
+## How forecasts are fetched
+
+Forecasts are fetched by the server when a popup asks for one, so visitors' browsers only ever talk to the site itself. Rain forecasts are kept for 15 minutes and flow forecasts for an hour, and if Open-Meteo can't be reached the last good answer is served.
+
+Flow forecasts come from [GloFAS](https://global-flood.emergency.copernicus.eu/), the Copernicus global flood model, through Open-Meteo's flood API. GloFAS routes rivers on a grid of cells about 5 km across, and at that scale a Cornish river often runs through the cell next to its gauge rather than the one under it. `scripts/calibrate_flow.py` reads the model's 2015–2024 flows in the 25 cells around a National River Flow Archive gauging station and lists those whose mean flow is closest to the gauged mean; the chosen cell for each river is in `monitor/forecast.py`. The model's flows in that cell are scaled so their long-run mean matches the gauged mean, which the server reads from the NRFA and keeps for a week. The normal flow line is that mean, and the high flow line is the flow the scaled model exceeds one day in ten. GloFAS smooths peaks, so its own one-in-ten flow is a fairer mark for its forecasts than the gauged one.
+
+In the Tamar's cell the model has about half the river's gauged flow, so its flows are doubled; after scaling, the model's low and high flows match the gauged record to within 7%. The Fal was tried and left out, because the forecast for its cell runs far below anything in the model's own history there.
 
 ## How the map loads
 
@@ -123,9 +133,11 @@ monitor/poll.py           the 5-minute poll cycle
 monitor/live.py           writes site/data/live.json
 monitor/overflows.py      South West Water storm overflows: list, spill log, annual totals
 monitor/floods.py         Environment Agency flood warnings and alerts, and their areas
+monitor/forecast.py       rain and river flow forecasts from Open-Meteo, and the flow outlets
 monitor/db.py             SQLite schema and connection
 monitor/geo.py            boundary geometry shared with the overlay builder
 scripts/fetch_geodata.py  OpenStreetMap to site/data/*.geojson, data/places.json and data/neighbours.geojson
+scripts/calibrate_flow.py finds the GloFAS cell that carries a river past an NRFA gauge
 libs.sha256               checksums for the downloaded Leaflet files
 site/index.html           the page
 site/css/style.css        layout and theme, light and dark
@@ -144,4 +156,4 @@ Bug reports, corrections and pull requests are welcome; [CONTRIBUTING.md](CONTRI
 
 The code is released under the [MIT licence](LICENSE).
 
-The map data is © OpenStreetMap contributors, available under the [Open Database Licence](https://www.openstreetmap.org/copyright). This uses Environment Agency flood and river level data from the real-time data API (Beta), available under the [Open Government Licence](https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/). Storm overflow activity is © South West Water, under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), and the overflow annual returns are © Environment Agency copyright and/or database right, under the Open Government Licence. Basemap tiles are © [Esri](https://www.esri.com/). [Leaflet](https://leafletjs.com/) is released under the BSD 2-Clause licence.
+The map data is © OpenStreetMap contributors, available under the [Open Database Licence](https://www.openstreetmap.org/copyright). This uses Environment Agency flood and river level data from the real-time data API (Beta), available under the [Open Government Licence](https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/). Storm overflow activity is © South West Water, under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), and the overflow annual returns are © Environment Agency copyright and/or database right, under the Open Government Licence. Weather and river flow forecasts are from [Open-Meteo](https://open-meteo.com/), under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), with river flows generated using Copernicus Emergency Management Service information. Mean river flows are data from the UK National River Flow Archive. Basemap tiles are © [Esri](https://www.esri.com/). [Leaflet](https://leafletjs.com/) is released under the BSD 2-Clause licence.

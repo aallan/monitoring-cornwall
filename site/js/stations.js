@@ -6,6 +6,8 @@
 const StationPopup = (() => {
   const TZ = 'Europe/London';
   const RANGES = [[1, '24 hours'], [7, '7 days'], [28, '28 days']];
+  const FORECAST = 'forecast';  // the rain gauges' extra range: the next 48 hours
+  const FLOW = 'flow';          // some level gauges' extra range: modelled river flow
   const HISTORY_DAYS = 28;
   const history = new Map();  // station id -> Promise of the API response
 
@@ -39,6 +41,8 @@ const StationPopup = (() => {
     tidal: 'Tidal', raining: 'Raining', dry: 'Dry',
   };
 
+  const TREND_ARROW = { rising: '↑', falling: '↓', steady: '→' };
+
   // One line for tooltips: the reading and what it means.
   function summary(s) {
     if (s.state === 'no-data') return 'no readings yet';
@@ -46,7 +50,7 @@ const StationPopup = (() => {
       return s.state === 'stale' ? `no reading since ${fmtTime(s.ts)}`
         : `${fmtValue(s, s.h1)} in the last hour · ${fmtValue(s, s.h24)} in 24 h`;
     }
-    const trend = s.trend ? ` · ${s.trend}` : '';
+    const trend = s.trend ? ` · ${TREND_ARROW[s.trend]} ${s.trend}` : '';
     return s.state === 'stale' ? `${fmtValue(s, s.value)} at ${fmtTime(s.ts)}` : `${fmtValue(s, s.value)}${trend}`;
   }
 
@@ -227,6 +231,156 @@ const StationPopup = (() => {
     return `Dashed line: top of typical range, ${fmtValue(s, high)}${record}`;
   }
 
+  // Rain forecast ----------------------------------------------------------------
+  const forecasts = new Map();  // station id -> Promise of the API response
+
+  function loadForecast(id) {
+    if (!forecasts.has(id)) {
+      const p = getJSON(`/api/forecast/rain/${encodeURIComponent(id)}`);
+      p.catch(() => forecasts.delete(id));
+      forecasts.set(id, p);
+    }
+    return forecasts.get(id);
+  }
+
+  // The next 48 hours as amber bars, one per hour, as on Floodwatch.
+  function drawForecast(host, readout, key, d) {
+    host.textContent = '';
+    readout.textContent = '';
+    const hours = d.hours || [];
+    if (!hours.length) {
+      host.textContent = 'No forecast is available right now.';
+      key.textContent = '';
+      return;
+    }
+    const from = hours[0][0], to = from + 48 * 3600;
+    const total = hours.reduce((sum, h) => sum + h[1], 0);
+    key.textContent = total > 0
+      ? `Forecast rain per hour, from Open-Meteo · ${total.toLocaleString('en-GB', { maximumFractionDigits: 1 })} mm in all`
+      : 'No rain forecast in the next 48 hours, from Open-Meteo';
+    const svg = el('svg', { viewBox: `0 0 ${W} ${H}`, class: 'stn-chart', role: 'img',
+      'aria-label': `Rain forecast for the next 48 hours: ${total.toFixed(1)} mm in all` });
+    host.appendChild(svg);
+    const x = t => M.l + (t - from) / (to - from) * (W - M.l - M.r);
+    const axis = niceScale(0, Math.max(1, ...hours.map(h => h[1])));
+    const y = v => M.t + (1 - (v - axis.lo) / (axis.hi - axis.lo)) * (H - M.t - M.b);
+    for (const v of axis.ticks) {
+      el('line', { x1: M.l, x2: W - M.r, y1: y(v), y2: y(v), class: 'stn-grid' }, svg);
+      el('text', { x: M.l - 5, y: y(v) + 3, 'text-anchor': 'end', class: 'stn-axis' }, svg).textContent =
+        v.toLocaleString('en-GB', { maximumFractionDigits: 2 });
+    }
+    for (const t of timeTicks(from, to, 1)) {
+      el('line', { x1: x(t), x2: x(t), y1: M.t, y2: H - M.b, class: 'stn-grid' }, svg);
+      const midnight = new Date(t * 1000).toLocaleTimeString('en-GB', { timeZone: TZ, hour: '2-digit' }) === '00';
+      el('text', { x: x(t), y: H - 6, 'text-anchor': 'middle', class: 'stn-axis' }, svg).textContent =
+        midnight ? tickLabel(t, 7) : tickLabel(t, 1);
+    }
+    const bw = Math.max(1, x(from + 3600) - x(from) - 1);
+    for (const [t, mm] of hours) {
+      if (mm > 0) el('rect', { x: x(t), y: y(mm), width: bw, height: y(0) - y(mm), class: 'stn-bar stn-bar-forecast' }, svg);
+    }
+    const cursor = el('line', { y1: M.t, y2: H - M.b, class: 'stn-cursor', visibility: 'hidden' }, svg);
+    svg.addEventListener('mousemove', e => {
+      const box = svg.getBoundingClientRect();
+      const t = from + ((e.clientX - box.left) * W / box.width - M.l) / (W - M.l - M.r) * (to - from);
+      const h = hours.find(r => t >= r[0] && t < r[0] + 3600);
+      if (!h) return;
+      cursor.setAttribute('x1', x(h[0] + 1800));
+      cursor.setAttribute('x2', x(h[0] + 1800));
+      cursor.setAttribute('visibility', 'visible');
+      const chance = h[2] != null ? ` (${h[2]}% chance of rain)` : '';
+      readout.textContent = `${fmtTime(h[0])} · ${h[1].toLocaleString('en-GB', { maximumFractionDigits: 1 })} mm${chance}`;
+    });
+    svg.addEventListener('mouseleave', () => { cursor.setAttribute('visibility', 'hidden'); readout.textContent = ''; });
+  }
+
+  // River flow forecast ----------------------------------------------------------
+  const flows = new Map();  // station id -> Promise of the API response
+
+  function loadFlow(id) {
+    if (!flows.has(id)) {
+      const p = getJSON(`/api/forecast/flow/${encodeURIComponent(id)}`);
+      p.catch(() => flows.delete(id));
+      flows.set(id, p);
+    }
+    return flows.get(id);
+  }
+
+  const fmtFlowNum = v => Number(v).toLocaleString('en-GB', { maximumFractionDigits: v < 10 ? 1 : 0 });
+  const fmtFlow = v => `${fmtFlowNum(v)} m³/s`;
+
+  // Daily modelled flow: the past week in blue, the fortnight ahead in amber
+  // with the spread of the forecast ensemble, against normal and high flow.
+  function drawFlow(host, readout, key, d) {
+    host.textContent = '';
+    readout.textContent = '';
+    const days = d.days || [];
+    if (!days.length) {
+      host.textContent = 'No flow forecast is available right now.';
+      key.textContent = '';
+      return;
+    }
+    key.textContent = `Daily flow modelled by GloFAS, scaled to NRFA gauge ${d.nrfa}. ` +
+      `Dashed line: high flow, ${fmtFlow(d.high)} · dotted: normal, ${fmtFlow(d.normal)}`;
+    const now = Math.floor(Date.now() / 1000);
+    const from = days[0][0], to = days[days.length - 1][0] + 86400;
+    const svg = el('svg', { viewBox: `0 0 ${W} ${H}`, class: 'stn-chart', role: 'img',
+      'aria-label': `${d.river}: modelled flow for the past week and the next fortnight` });
+    host.appendChild(svg);
+    const x = t => M.l + (t - from) / (to - from) * (W - M.l - M.r);
+    const axis = niceScale(0, Math.max(d.high * 1.15, ...days.map(r => r[3] ?? r[1])));
+    const y = v => M.t + (1 - (v - axis.lo) / (axis.hi - axis.lo)) * (H - M.t - M.b);
+
+    for (const v of axis.ticks) {
+      el('line', { x1: M.l, x2: W - M.r, y1: y(v), y2: y(v), class: 'stn-grid' }, svg);
+      el('text', { x: M.l - 5, y: y(v) + 3, 'text-anchor': 'end', class: 'stn-axis' }, svg).textContent =
+        v.toLocaleString('en-GB', { maximumFractionDigits: 2 });
+    }
+    for (const t of timeTicks(from, to, 28)) {
+      el('line', { x1: x(t), x2: x(t), y1: M.t, y2: H - M.b, class: 'stn-grid' }, svg);
+      el('text', { x: x(t), y: H - 6, 'text-anchor': 'middle', class: 'stn-axis' }, svg).textContent = tickLabel(t, 28);
+    }
+    for (const [v, cls] of [[d.normal, 'stn-ref stn-ref-normal'], [d.high, 'stn-ref stn-ref-high']]) {
+      el('line', { x1: M.l, x2: W - M.r, y1: y(v), y2: y(v), class: cls }, svg);
+    }
+
+    // Each day is plotted at its middle. The forecast starts with today.
+    const mid = r => x(r[0] + 43200);
+    const ahead = days.filter(r => r[0] + 86400 > now);
+    const past = days.filter(r => r[0] + 86400 <= now);
+    const spread = ahead.filter(r => r[2] != null && r[3] != null);
+    if (spread.length > 1) {
+      const top = spread.map(r => `${mid(r).toFixed(1)},${y(r[3]).toFixed(1)}`);
+      const bottom = spread.slice().reverse().map(r => `${mid(r).toFixed(1)},${y(r[2]).toFixed(1)}`);
+      el('path', { d: `M${top.join('L')}L${bottom.join('L')}Z`, class: 'stn-band' }, svg);
+    }
+    const line = (rows, cls) => {
+      if (rows.length > 1) el('path', { d: 'M' + rows.map(r => `${mid(r).toFixed(1)},${y(r[1]).toFixed(1)}`).join('L'), class: cls }, svg);
+    };
+    // The past line runs on into today, so the two halves join.
+    line(ahead.length ? [...past, ahead[0]] : past, 'stn-line stn-line-level');
+    line(ahead, 'stn-line stn-line-forecast');
+    if (now > from && now < to) {
+      el('line', { x1: x(now), x2: x(now), y1: M.t, y2: H - M.b, class: 'stn-today' }, svg);
+      el('text', { x: x(now) + 3, y: M.t + 8, class: 'stn-today-label' }, svg).textContent = 'Today';
+    }
+
+    const cursor = el('line', { y1: M.t, y2: H - M.b, class: 'stn-cursor', visibility: 'hidden' }, svg);
+    svg.addEventListener('mousemove', e => {
+      const box = svg.getBoundingClientRect();
+      const t = from + ((e.clientX - box.left) * W / box.width - M.l) / (W - M.l - M.r) * (to - from);
+      const r = days.find(row => t >= row[0] && t < row[0] + 86400);
+      if (!r) return;
+      cursor.setAttribute('x1', mid(r));
+      cursor.setAttribute('x2', mid(r));
+      cursor.setAttribute('visibility', 'visible');
+      const day = new Date(r[0] * 1000).toLocaleDateString('en-GB', { timeZone: TZ, weekday: 'short', day: 'numeric', month: 'short' });
+      const range = r[2] != null && r[3] != null && r[3] - r[2] >= 0.05 ? `, range ${fmtFlowNum(r[2])}–${fmtFlow(r[3])}` : '';
+      readout.textContent = `${day} · ${fmtFlow(r[1])}${r[0] + 86400 > now ? ' forecast' : ''}${range}`;
+    });
+    svg.addEventListener('mouseleave', () => { cursor.setAttribute('visibility', 'hidden'); readout.textContent = ''; });
+  }
+
   // Popup ----------------------------------------------------------------------
   function node(tag, cls, text) {
     const e = document.createElement(tag);
@@ -247,7 +401,7 @@ const StationPopup = (() => {
       now.appendChild(node('span', 'stn-pop-note', 'in the last 24 hours'));
     } else {
       now.appendChild(node('span', 'stn-pop-value', fmtValue(s, s.value)));
-      if (s.trend) now.appendChild(node('span', 'stn-pop-note', s.trend));
+      if (s.trend) now.appendChild(node('span', `stn-pop-trend is-${s.trend}`, `${TREND_ARROW[s.trend]} ${s.trend}`));
     }
     box.appendChild(now);
     const state = node('div', `stn-pop-state is-${s.state}`);
@@ -266,6 +420,18 @@ const StationPopup = (() => {
     let current = 7;
     const render = () => {
       chartHost.classList.add('loading');
+      if (current === FORECAST || current === FLOW) {
+        const [get, draw] = current === FLOW ? [loadFlow, drawFlow] : [loadForecast, drawForecast];
+        get(s.id).then(d => {
+          chartHost.classList.remove('loading');
+          draw(chartHost, readout, key, d);
+        }).catch(() => {
+          chartHost.classList.remove('loading');
+          chartHost.textContent = 'The forecast is unavailable right now.';
+          key.textContent = '';
+        });
+        return;
+      }
       load(s.id).then(data => {
         chartHost.classList.remove('loading');
         drawChart(chartHost, readout, key, s, data, current);
@@ -274,7 +440,9 @@ const StationPopup = (() => {
         chartHost.textContent = 'History is unavailable right now.';
       });
     };
-    for (const [days, text] of RANGES) {
+    const ranges = s.kind === 'rain' ? [...RANGES, [FORECAST, 'Next 48 h']]
+      : s.flow ? [...RANGES, [FLOW, 'River flow']] : RANGES;
+    for (const [days, text] of ranges) {
       const b = node('button', 'btn-toggle' + (days === current ? ' active' : ''), text);
       b.type = 'button';
       b.addEventListener('click', () => {
