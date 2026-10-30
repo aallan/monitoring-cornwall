@@ -20,7 +20,7 @@ make data
 make serve
 ```
 
-Then open [http://localhost:8090](http://localhost:8090).
+Then open [http://localhost:8090](http://localhost:8090). The first poll for live readings fetches four weeks of history and takes about a quarter of an hour; the rest of the map is there straight away.
 
 ## Making a change
 
@@ -38,7 +38,7 @@ Then open [http://localhost:8090](http://localhost:8090).
 
 ## What not to send
 
-- Generated files. `site/lib/`, `site/data/` and `.cache/` are built on the machine that serves the site and stay out of the repository.
+- Generated files. `site/lib/`, `site/data/`, `data/` and `.cache/` are built on the machine that serves the site and stay out of the repository.
 - Frameworks, bundlers or package managers. The page is plain HTML, CSS and JavaScript with no build step, and the Python has no third-party dependencies.
 - Scripts, styles or fonts from a CDN. The Content Security Policy only allows the site's own origin and the basemap tile server; a new library is downloaded by `make libs` and pinned in `libs.sha256`.
 - Credentials, API keys or personal data of any kind.

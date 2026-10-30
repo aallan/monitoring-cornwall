@@ -2,6 +2,7 @@
 site/lib/
 site/data/
 .cache/
+data/
 
 # Local tooling
 .claude/

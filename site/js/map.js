@@ -38,9 +38,13 @@ const CornwallMap = (() => {
     freight:   { on: true },
     stations:  { on: true },
     roads:     { on: true },
+    levels:    { on: true },
+    tidal:     { on: true },
+    rain:      { on: true },
   };
   // Legend sections whose heading switches the whole group.
   const GROUPS = {
+    live: ['levels', 'tidal', 'rain'],
     waterways: ['rivers', 'streams'],
     railways: ['passenger', 'freight', 'stations'],
     roads: ['roads'],
@@ -383,8 +387,55 @@ const CornwallMap = (() => {
     addPart(labels, 'roads', Z.markers, 9);
   }
 
+  // ---------------------------------------------------------------- live stations
+  // DOM markers, so their shapes and colours come straight from the
+  // stylesheet: circles for river levels, diamonds for tidal gauges, and
+  // drops for rain gauges.
+  const LIVE_REFRESH_MS = 5 * 60 * 1000;
+  const liveGroups = { level: L.layerGroup(), tidal: L.layerGroup(), rain: L.layerGroup() };
+  let liveRegistered = false;
+
+  function renderLive(live) {
+    if (!liveRegistered) {
+      addPart(liveGroups.level, 'levels', Z.markers);
+      addPart(liveGroups.tidal, 'tidal', Z.markers);
+      addPart(liveGroups.rain, 'rain', Z.markers);
+      liveRegistered = true;
+    }
+    Object.values(liveGroups).forEach(g => g.clearLayers());
+    const counts = { level: 0, tidal: 0, rain: 0 };
+    for (const s of live.stations) {
+      if (!liveGroups[s.kind]) continue;
+      counts[s.kind]++;
+      const icon = L.divIcon({
+        className: '', iconSize: [14, 14], iconAnchor: [7, 7],
+        html: `<span class="stn stn-${s.kind} is-${esc(s.state)}"></span>`,
+      });
+      L.marker([s.lat, s.lon], { icon, title: s.name, riseOnHover: true })
+        .bindTooltip(tip(s.name, StationPopup.summary(s)), { ...TIP_OPTS, sticky: false, offset: [0, -10] })
+        .on('click', () => StationPopup.open(map, s))
+        .addTo(liveGroups[s.kind]);
+    }
+    setCount('levels', counts.level);
+    setCount('tidal', counts.tidal);
+    setCount('rain', counts.rain);
+    StationPopup.invalidate();
+    if (window.onLiveUpdate) window.onLiveUpdate(live);
+  }
+
+  function loadLive() {
+    return getJSON(DATA + 'live.json')
+      .then(live => { renderLive(live); updateVisibility(); })
+      .catch(e => console.warn('No live readings:', e));
+  }
+
   // ---------------------------------------------------------------- legend
-  function addLegend(counts) {
+  function setCount(key, n) {
+    const span = document.getElementById(`legend-count-${key}`);
+    if (span) span.textContent = fmtInt(n);
+  }
+
+  function addLegend() {
     const ctl = L.control({ position: 'bottomleft' });
     ctl.onAdd = () => {
       const div = L.DomUtil.create('div', 'map-legend');
@@ -403,13 +454,17 @@ const CornwallMap = (() => {
           Layers<span class="legend-chevron" aria-hidden="true"></span>
         </button>
         <div class="legend-body" id="legend-body">
+        ${title('live', 'Live readings')}
+        ${item('levels', 'stn level', '--level-normal', 'River levels', '<span class="count" id="legend-count-levels"></span>')}
+        ${item('tidal', 'stn tidal', '--tidal', 'Tidal levels', '<span class="count" id="legend-count-tidal"></span>')}
+        ${item('rain', 'stn rain', '--rain', 'Rain gauges', '<span class="count" id="legend-count-rain"></span>')}
         ${title('waterways', 'Waterways')}
-        ${item('rivers', 'line', '--water', 'Rivers', `<span class="count">${fmtInt(counts.rivers)}</span>`)}
+        ${item('rivers', 'line', '--water', 'Rivers', '<span class="count" id="legend-count-rivers"></span>')}
         ${item('streams', 'line thin', '--water-minor', 'Streams', '<span class="count" id="legend-streams-hint"></span>')}
         ${title('railways', 'Railways')}
         ${item('passenger', 'line', '--rail', 'Passenger lines')}
         ${item('freight', 'dash', '--rail-freight', 'Freight branches')}
-        ${item('stations', 'dot', '--rail', 'Stations', `<span class="count">${fmtInt(counts.stations)}</span>`)}
+        ${item('stations', 'dot', '--rail', 'Stations', '<span class="count" id="legend-count-stations"></span>')}
         ${title('roads', 'Roads')}
         ${item('roads', 'road', '--road', 'Major roads')}
         <div class="legend-title">Boundary</div>
@@ -457,7 +512,7 @@ const CornwallMap = (() => {
   }
 
   // ---------------------------------------------------------------- public
-  async function init(id) {
+  function init(id) {
     map = L.map(id, {
       // Whole zoom levels only: fractional zoom leaves seams between tiles.
       zoomSnap: 1, zoomDelta: 1, minZoom: 8, maxZoom: 16,
@@ -468,27 +523,39 @@ const CornwallMap = (() => {
     });
     map.attributionControl.setPrefix('<a href="https://leafletjs.com">Leaflet</a>');
     map.attributionControl.addAttribution('&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors');
+    map.attributionControl.addAttribution('Readings: <a href="https://environment.data.gov.uk/flood-monitoring/doc/reference">Environment Agency</a>');
     map.setView([50.45, -4.95], 9, { animate: false });  // placeholder until the container has a size
     fitIfVisible();
     makePanes();
     setTiles();
 
-    const load = name => getJSON(DATA + name).catch(e => { console.warn(e); return null; });
-    const [boundary, rivers, streams, railways, stations, roads] = await Promise.all(
-      ['boundary.geojson', 'rivers.geojson', 'streams.geojson', 'railways.geojson', 'stations.geojson', 'roads.geojson']
-        .map(load));
+    addLegend();
+    map.on('zoomend', () => { loadStreamsIfNeeded(); updateVisibility(); restylers.forEach(fn => fn()); });
 
-    const counts = { rivers: 0, stations: 0 };
-    if (boundary) addBoundary(boundary);
-    if (streams) addStreams(streams);
-    if (rivers) counts.rivers = addRivers(rivers);
-    if (roads) addRoads(roads);
-    if (railways) addRailways(railways);
-    if (stations) counts.stations = addStations(stations);
-    addLegend(counts);
-    updateVisibility();
+    // Each layer draws as soon as its file arrives; nothing waits for the
+    // rest. Live readings are a single small file, so markers appear first.
+    loadLive();
+    setInterval(loadLive, LIVE_REFRESH_MS);
+    const layer = (name, add) => getJSON(DATA + name)
+      .then(fc => { add(fc); updateVisibility(); })
+      .catch(e => console.warn(e));
+    layer('boundary.geojson', addBoundary);
+    layer('rivers.geojson', fc => setCount('rivers', addRivers(fc)));
+    layer('roads.geojson', addRoads);
+    layer('railways.geojson', addRailways);
+    layer('stations.geojson', fc => setCount('stations', addStations(fc)));
+    loadStreamsIfNeeded();
+  }
 
-    map.on('zoomend', () => { updateVisibility(); restylers.forEach(fn => fn()); });
+  // Streams are the largest overlay and only show from STREAM_MIN_ZOOM, so
+  // they load the first time the map reaches that zoom.
+  let streamsRequested = false;
+  function loadStreamsIfNeeded() {
+    if (streamsRequested || map.getZoom() < STREAM_MIN_ZOOM) return;
+    streamsRequested = true;
+    getJSON(DATA + 'streams.geojson')
+      .then(fc => { addStreams(fc); updateVisibility(); })
+      .catch(e => { streamsRequested = false; console.warn(e); });
   }
 
   function restyle() {

@@ -33,6 +33,12 @@
     --road-edge: #4f7d58;
     --road-badge: #2f6a45;
     --road-badge-text: #f6e7a6;
+    --level-normal: #4f9a6c;
+    --level-high: #c4564a;
+    --level-low: #8db0c8;
+    --level-unknown: #7d8f9c;
+    --tidal: #c47a2a;
+    --rain: #4a82a8;
     --station-fill: #ffffff;
     --mask: #d9d5cd;
     --mask-opacity: 0.55;
@@ -65,6 +71,12 @@
         --road-edge: #335c3d;
         --road-badge: #2f6a45;
         --road-badge-text: #f6e7a6;
+        --level-normal: #6fb585;
+        --level-high: #d4837a;
+        --level-low: #6f93ad;
+        --level-unknown: #8a96a0;
+        --tidal: #d39a5e;
+        --rain: #6aa9d6;
         --station-fill: #262522;
         --mask: #0e0d0c;
         --mask-opacity: 0.5;
@@ -96,6 +108,12 @@
     --road-edge: #335c3d;
     --road-badge: #2f6a45;
     --road-badge-text: #f6e7a6;
+    --level-normal: #6fb585;
+    --level-high: #d4837a;
+    --level-low: #6f93ad;
+    --level-unknown: #8a96a0;
+    --tidal: #d39a5e;
+    --rain: #6aa9d6;
     --station-fill: #262522;
     --mask: #0e0d0c;
     --mask-opacity: 0.5;
@@ -340,3 +358,80 @@ footer { width: 100%; padding: 0 2rem 1.5rem; }
     .data-table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
     .footer-content { flex-direction: column; align-items: flex-start; gap: 0.35rem; }
 }
+
+/* ---------- Live stations ---------- */
+.stn {
+    display: block; width: 12px; height: 12px; margin: 1px;
+    border: 1.5px solid var(--station-fill); box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.18);
+    cursor: pointer; transition: transform 0.15s;
+}
+.leaflet-marker-icon:hover .stn, .leaflet-marker-icon:focus .stn { transform: scale(1.25); }
+.stn-level { border-radius: 50%; background: var(--level-normal); }
+.stn-level.is-high { background: var(--level-high); }
+.stn-level.is-low { background: var(--level-low); }
+.stn-level.is-unknown { background: var(--level-unknown); }
+.stn-tidal { width: 10px; height: 10px; margin: 2px; border-radius: 2px; transform: rotate(45deg); background: var(--tidal); }
+.leaflet-marker-icon:hover .stn-tidal, .leaflet-marker-icon:focus .stn-tidal { transform: rotate(45deg) scale(1.25); }
+/* A drop: a rounded square with one sharp corner, pointing down */
+.stn-rain { border-radius: 50% 50% 50% 0; transform: rotate(-45deg); background: var(--station-fill); border-color: var(--rain); border-width: 2px; }
+.stn-rain.is-raining { background: var(--rain); border-color: var(--station-fill); border-width: 1.5px; }
+.leaflet-marker-icon:hover .stn-rain, .leaflet-marker-icon:focus .stn-rain { transform: rotate(-45deg) scale(1.25); }
+.stn.is-stale, .stn.is-no-data { background: var(--station-fill); border-color: var(--text-tertiary); box-shadow: none; }
+
+/* Legend swatches for the station kinds */
+.swatch.stn::before { left: 6px; right: auto; width: 10px; height: 10px; }
+.swatch.stn.level::before { border-radius: 50%; background: var(--level-normal); }
+.swatch.stn.tidal::before { width: 8px; height: 8px; left: 7px; border-radius: 1px; transform: translateY(-50%) rotate(45deg); background: var(--tidal); }
+.swatch.stn.rain::before { border-radius: 50% 50% 50% 0; transform: translateY(-50%) rotate(-45deg); background: var(--rain); }
+.legend-item.off .swatch.stn::before { opacity: 0.3; }
+
+/* Station popup: a house-style card */
+.stn-popup .leaflet-popup-content-wrapper {
+    background: var(--bg-card); color: var(--text); border: 1px solid var(--border);
+    border-radius: var(--radius); box-shadow: 0 4px 18px rgba(0, 0, 0, 0.14);
+}
+.stn-popup .leaflet-popup-tip { background: var(--bg-card); border: 1px solid var(--border); box-shadow: none; }
+.stn-popup .leaflet-popup-content { margin: 0.9rem 1rem 0.75rem; font-family: var(--font); line-height: 1.4; }
+.stn-popup a.leaflet-popup-close-button { color: var(--text-tertiary); top: 6px; right: 6px; }
+.stn-popup a.leaflet-popup-close-button:hover { color: var(--text); }
+.stn-pop-title { font-size: 0.95rem; font-weight: 600; padding-right: 1rem; }
+.stn-pop-sub { font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.5rem; }
+.stn-pop-now { display: flex; align-items: baseline; gap: 0.5rem; }
+.stn-pop-value { font-size: 1.4rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.stn-pop-note { font-size: 0.8rem; color: var(--text-secondary); }
+.stn-pop-state { display: flex; align-items: center; gap: 0.4rem; font-size: 0.78rem; color: var(--text-secondary); margin: 0.15rem 0 0.6rem; }
+.stn-pop-when { color: var(--text-tertiary); }
+.stn-pop-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-tertiary); flex: none; }
+.is-normal .stn-pop-dot { background: var(--level-normal); }
+.is-high .stn-pop-dot { background: var(--level-high); }
+.is-low .stn-pop-dot { background: var(--level-low); }
+.is-tidal .stn-pop-dot { background: var(--tidal); }
+.is-raining .stn-pop-dot { background: var(--rain); }
+.is-dry .stn-pop-dot { background: none; box-shadow: inset 0 0 0 1.5px var(--rain); }
+.stn-pop-ranges { display: flex; gap: 0.25rem; margin-bottom: 0.4rem; }
+.stn-pop-ranges .btn-toggle { padding: 0.2rem 0.55rem; font-size: 0.72rem; border-radius: 6px; }
+.stn-pop-chart { min-height: 150px; }
+.stn-pop-chart.loading { opacity: 0.4; }
+.stn-pop-readout { min-height: 1.2em; font-size: 0.72rem; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.stn-pop-source { margin-top: 0.35rem; font-size: 0.68rem; color: var(--text-tertiary); }
+
+/* Station chart: inline SVG, coloured from the theme */
+.stn-chart { display: block; width: 100%; height: auto; overflow: visible; }
+.stn-grid { stroke: var(--border); stroke-width: 1; }
+.stn-axis { fill: var(--text-tertiary); font-size: 9px; font-family: var(--font); font-variant-numeric: tabular-nums; }
+.stn-band { fill: var(--up-light); }
+.stn-line { fill: none; stroke-width: 1.6; stroke-linejoin: round; stroke-linecap: round; }
+.stn-line-level { stroke: var(--water); }
+.stn-line-tidal { stroke: var(--tidal); }
+.stn-bar { fill: var(--rain); }
+.stn-cursor { stroke: var(--text-tertiary); stroke-width: 1; stroke-dasharray: 2 2; }
+.stn-chart-empty { fill: var(--text-tertiary); font-size: 11px; font-family: var(--font); }
+
+/* The house toggle button, used for the popup's time ranges */
+.btn-toggle {
+    background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 0.35rem 0.75rem; font: inherit; font-size: 0.8rem; color: var(--text-secondary);
+    cursor: pointer; transition: all 0.15s;
+}
+.btn-toggle:hover { background: var(--bg-hover); }
+.btn-toggle.active { background: var(--text); color: var(--bg); border-color: var(--text); }
