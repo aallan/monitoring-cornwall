@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
-"""Fetch Cornwall's boundary, waterways and railways from OpenStreetMap.
+"""Fetch Cornwall's boundary, waterways, railways and major roads from OpenStreetMap.
 
 Queries the Overpass API and writes simplified GeoJSON overlays to site/data/:
 
     boundary.geojson   Cornwall + Isles of Scilly (multipolygon)
     rivers.geojson     rivers and canals, one feature per named river
     streams.geojson    streams (minor waterways), simplified
-    railways.geojson   running lines, classified passenger / heritage / freight
-    stations.geojson   railway stations and halts
+    railways.geojson   running lines, classified passenger or freight
+    roads.geojson      major roads (one- and two-digit A roads)
+    stations.geojson   National Rail stations
     meta.json          when the snapshot was taken, and feature counts
 
 Standard library only. Run occasionally (``make data``; add ``--refresh`` to bypass the cache, or
@@ -517,6 +518,30 @@ def fetch_railways():
     return rails, stations
 
 
+def fetch_roads():
+    """The county's major roads: A roads with one- or two-digit numbers.
+
+    In Cornwall these are the A30, A38 and A39. Slip roads (``*_link``) are
+    left out. Dual carriageways stay as two lines, as OSM draws them.
+    """
+    els = overpass(
+        f'[out:json][timeout:240];{AREA}way(area.c)["highway"~"^(motorway|trunk|primary)$"]'
+        '["ref"~"(^|;) *A[0-9]{1,2}( *;|$)"];out tags geom;', "roads")
+    by_ref = defaultdict(list)
+    for w in els:
+        refs = [r.strip() for r in w.get("tags", {}).get("ref", "").split(";")]
+        major = [r for r in refs if r[:1] == "A" and r[1:].isdigit() and len(r) <= 3]
+        if major:
+            by_ref[major[0]].append(coords_of(w))
+    roads = []
+    for ref, lines in sorted(by_ref.items()):
+        merged = merge_lines(lines)
+        parts = [rnd(simplify(l, SIMPLIFY_RAIL)) for l in merged]
+        roads.append(feature("MultiLineString", parts, ref=ref,
+                             length_km=round(sum(length_km(l) for l in merged), 1)))
+    return roads
+
+
 def main():
     sys.stdout.reconfigure(line_buffering=True)  # show progress when piped
     OUT.mkdir(parents=True, exist_ok=True)
@@ -530,12 +555,15 @@ def main():
     rivers, streams = fetch_waterways(land, coast)
     pause()
     rails, stations = fetch_railways()
+    pause()
+    roads = fetch_roads()
 
     print("Writing overlays…")
     write("boundary.geojson", boundary)
     write("rivers.geojson", rivers)
     write("streams.geojson", streams)
     write("railways.geojson", rails)
+    write("roads.geojson", roads)
     write("stations.geojson", stations)
     meta = {
         "generated": datetime.fromtimestamp(min(FETCHED), timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),

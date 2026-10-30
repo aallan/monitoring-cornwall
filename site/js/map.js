@@ -37,6 +37,13 @@ const CornwallMap = (() => {
     passenger: { on: true },
     freight:   { on: true },
     stations:  { on: true },
+    roads:     { on: true },
+  };
+  // Legend sections whose heading switches the whole group.
+  const GROUPS = {
+    waterways: ['rivers', 'streams'],
+    railways: ['passenger', 'freight', 'stations'],
+    roads: ['roads'],
   };
   const parts = [];       // { layer, toggle, minZoom, z }
   const restylers = [];   // functions re-applying colours/weights
@@ -44,7 +51,7 @@ const CornwallMap = (() => {
 
   // Draw order on the shared canvas, bottom to top. Labels and arrows are
   // DOM markers in their own pane, so their order doesn't matter.
-  const Z = { mask: 0, streams: 1, rivers: 2, boundary: 3, rail: 4, stations: 5, markers: 9 };
+  const Z = { mask: 0, streams: 1, rivers: 2, roads: 3, boundary: 4, rail: 5, stations: 6, markers: 9 };
 
   function addPart(layer, toggle, z, minZoom = 0) {
     parts.push({ layer, toggle, z, minZoom });
@@ -82,7 +89,7 @@ const CornwallMap = (() => {
     map.getPane('labels').style.pointerEvents = 'none';
     renderers.mask = L.canvas({ pane: 'mask' });
     const shared = L.canvas({ tolerance: 5 });
-    for (const name of ['streams', 'rivers', 'boundary', 'rail', 'stations']) renderers[name] = shared;
+    for (const name of ['streams', 'rivers', 'roads', 'boundary', 'rail', 'stations']) renderers[name] = shared;
   }
 
   // ---------------------------------------------------------------- basemap
@@ -334,6 +341,48 @@ const CornwallMap = (() => {
     return fc.features.length;
   }
 
+  // ---------------------------------------------------------------- roads
+  const ROAD_LABEL_SPACING_KM = 18;
+
+  function addRoads(fc) {
+    const group = L.layerGroup();
+    const opts = {
+      renderer: renderers.roads,
+      onEachFeature: (f, layer) => layer.bindTooltip(tip(f.properties.ref, 'major road'), TIP_OPTS),
+    };
+    // A darker edge under a lighter fill, so the road reads against the
+    // basemap without competing with the railways drawn above it.
+    const edge = L.geoJSON(fc, opts).addTo(group);
+    const fill = L.geoJSON(fc, { renderer: renderers.roads, interactive: false }).addTo(group);
+    const style = () => {
+      const s = zoomScale();
+      edge.setStyle({ color: cssVar('--road-edge'), weight: 4 * s, opacity: 0.9, lineCap: 'round', lineJoin: 'round' });
+      fill.setStyle({ color: cssVar('--road'), weight: 2.2 * s, opacity: 1, lineCap: 'round', lineJoin: 'round' });
+    };
+    style();
+    restylers.push(style);
+
+    // Number badges at the midpoints of the longer stretches, spaced out so
+    // each road is labelled every ROAD_LABEL_SPACING_KM or so.
+    const labels = L.layerGroup();
+    for (const f of fc.features) {
+      const placed = [];
+      const stretches = f.geometry.coordinates
+        .map(c => ({ c, km: partLength(c) }))
+        .filter(p => p.km >= 2)
+        .sort((a, b) => b.km - a.km);
+      for (const { c } of stretches) {
+        const at = pointAlong(c, 0.5);
+        const pt = [at[1], at[0]];
+        if (placed.some(q => kmBetween(q, pt) < ROAD_LABEL_SPACING_KM)) continue;
+        placed.push(pt);
+        label(at, f.properties.ref, 'road').addTo(labels);
+      }
+    }
+    addPart(group, 'roads', Z.roads);
+    addPart(labels, 'roads', Z.markers, 9);
+  }
+
   // ---------------------------------------------------------------- legend
   function addLegend(counts) {
     const ctl = L.control({ position: 'bottomleft' });
@@ -343,6 +392,9 @@ const CornwallMap = (() => {
         `<button type="button" class="legend-item" data-key="${key}" aria-pressed="true">
            <span class="swatch ${swatch}" style="--c: var(${colour})"></span>${esc(text)}${extra}
          </button>`;
+      const title = (group, text) =>
+        `<button type="button" class="legend-title legend-group" data-group="${group}"
+           title="Show or hide all ${esc(text.toLowerCase())}">${esc(text)}</button>`;
       // Collapsed by default on phones, where the full legend hides the map.
       const collapsed = window.matchMedia('(max-width: 640px)').matches;
       div.classList.toggle('collapsed', collapsed);
@@ -351,13 +403,15 @@ const CornwallMap = (() => {
           Layers<span class="legend-chevron" aria-hidden="true"></span>
         </button>
         <div class="legend-body" id="legend-body">
-        <div class="legend-title">Waterways</div>
+        ${title('waterways', 'Waterways')}
         ${item('rivers', 'line', '--water', 'Rivers', `<span class="count">${fmtInt(counts.rivers)}</span>`)}
         ${item('streams', 'line thin', '--water-minor', 'Streams', '<span class="count" id="legend-streams-hint"></span>')}
-        <div class="legend-title">Railways</div>
+        ${title('railways', 'Railways')}
         ${item('passenger', 'line', '--rail', 'Passenger lines')}
         ${item('freight', 'dash', '--rail-freight', 'Freight branches')}
         ${item('stations', 'dot', '--rail', 'Stations', `<span class="count">${fmtInt(counts.stations)}</span>`)}
+        ${title('roads', 'Roads')}
+        ${item('roads', 'road', '--road', 'Major roads')}
         <div class="legend-title">Boundary</div>
         ${item('boundary', 'area', '--accent', 'Cornwall')}
         </div>`;
@@ -370,17 +424,36 @@ const CornwallMap = (() => {
           head.setAttribute('aria-expanded', String(!isCollapsed));
           return;
         }
-        const btn = e.target.closest('.legend-item');
-        if (!btn) return;
-        const t = toggles[btn.dataset.key];
-        t.on = !t.on;
-        btn.classList.toggle('off', !t.on);
-        btn.setAttribute('aria-pressed', String(t.on));
+        // A group heading turns the whole group off if any of it is showing,
+        // otherwise back on.
+        const groupBtn = e.target.closest('.legend-group');
+        if (groupBtn) {
+          const keys = GROUPS[groupBtn.dataset.group];
+          const on = !keys.some(k => toggles[k].on);
+          keys.forEach(k => { toggles[k].on = on; });
+        } else {
+          const btn = e.target.closest('.legend-item');
+          if (!btn) return;
+          const t = toggles[btn.dataset.key];
+          t.on = !t.on;
+        }
+        syncLegend(div);
         updateVisibility();
       });
       return div;
     };
     ctl.addTo(map);
+  }
+
+  function syncLegend(div) {
+    div.querySelectorAll('.legend-item').forEach(btn => {
+      const on = toggles[btn.dataset.key].on;
+      btn.classList.toggle('off', !on);
+      btn.setAttribute('aria-pressed', String(on));
+    });
+    div.querySelectorAll('.legend-group').forEach(btn => {
+      btn.classList.toggle('off', !GROUPS[btn.dataset.group].some(k => toggles[k].on));
+    });
   }
 
   // ---------------------------------------------------------------- public
@@ -401,13 +474,15 @@ const CornwallMap = (() => {
     setTiles();
 
     const load = name => getJSON(DATA + name).catch(e => { console.warn(e); return null; });
-    const [boundary, rivers, streams, railways, stations] = await Promise.all(
-      ['boundary.geojson', 'rivers.geojson', 'streams.geojson', 'railways.geojson', 'stations.geojson'].map(load));
+    const [boundary, rivers, streams, railways, stations, roads] = await Promise.all(
+      ['boundary.geojson', 'rivers.geojson', 'streams.geojson', 'railways.geojson', 'stations.geojson', 'roads.geojson']
+        .map(load));
 
     const counts = { rivers: 0, stations: 0 };
     if (boundary) addBoundary(boundary);
     if (streams) addStreams(streams);
     if (rivers) counts.rivers = addRivers(rivers);
+    if (roads) addRoads(roads);
     if (railways) addRailways(railways);
     if (stations) counts.stations = addStations(stations);
     addLegend(counts);

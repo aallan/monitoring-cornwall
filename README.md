@@ -1,6 +1,6 @@
 # Monitoring Cornwall
 
-A map of Cornwall's rivers, streams and railways, built from [OpenStreetMap](https://www.openstreetmap.org/) data. It's a companion to [Floodwatch](https://github.com/aallan/floodwatch), which monitors the River Taw catchment in Devon at [tawriver.watch](https://tawriver.watch).
+A map of Cornwall's rivers, streams, railways and major roads, built from [OpenStreetMap](https://www.openstreetmap.org/) data. It's a companion to [Floodwatch](https://github.com/aallan/floodwatch), which monitors the River Taw catchment in Devon at [tawriver.watch](https://tawriver.watch).
 
 The site is a single page with no framework and no build step. The server and the data pipeline use only the Python standard library.
 
@@ -14,8 +14,9 @@ The site is a single page with no framework and no build step. The server and th
 | Passenger lines | `railway=rail` | The Cornish Main Line and the Atlantic Coast, Maritime, Looe Valley, Tamar Valley and St Ives Bay lines |
 | Freight branches | `railway=rail` with `usage=industrial` or `freight` | The china clay lines around Par and St Blazey |
 | Stations | `railway=station` and `railway=halt` | National Rail stations, each with its CRS code |
+| Major roads | `highway=trunk`, `primary` or `motorway` with a one- or two-digit A-road `ref` | The A30, A38 and A39, labelled with their numbers. Slip roads are left out |
 
-Hovering over a river, line or station shows its name. The legend switches each layer on and off, and the page follows the system's light or dark setting, with a toggle to override it.
+Every layer is on by default. Hovering over a river, line, road or station shows its name. Each row in the legend switches its layer on and off, and each section heading (Waterways, Railways, Roads) switches the whole section. The page follows the system's light or dark setting, with a toggle to override it.
 
 ## Running it
 
@@ -50,7 +51,7 @@ Every response includes a Content Security Policy that allows scripts, styles an
 
 ## How the overlays are built
 
-`scripts/fetch_geodata.py` queries Overpass for the county boundary, coastline, waterways, railways and stations, and writes simplified GeoJSON to `site/data/`, along with a `meta.json` that records when the data was downloaded.
+`scripts/fetch_geodata.py` queries Overpass for the county boundary, coastline, waterways, railways, stations and major roads, and writes simplified GeoJSON to `site/data/`, along with a `meta.json` that records when the data was downloaded.
 
 Queries select Cornwall by relation ID. The UK county is tagged `Kernow / Cornwall`, and a query on the name `Cornwall` returns Cornwall, Ontario.
 
