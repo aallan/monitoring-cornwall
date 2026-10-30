@@ -1,0 +1,10 @@
+# Built on the machine that serves the site, never committed
+site/lib/
+site/data/
+.cache/
+
+# Local tooling
+.claude/
+__pycache__/
+*.pyc
+.DS_Store

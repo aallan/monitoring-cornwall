@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <rect width="32" height="32" rx="7" fill="#2f7a86"/>
+  <!-- a river meeting the sea -->
+  <path d="M7 8 C12 10, 9 15, 14 17 S 20 21, 25 24" fill="none" stroke="#ffffff"
+        stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M5 25 q3 -2 6 0 t6 0 t6 0" fill="none" stroke="#ffffff" stroke-opacity="0.7"
+        stroke-width="1.8" stroke-linecap="round"/>
+</svg>
