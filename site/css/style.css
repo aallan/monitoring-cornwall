@@ -499,6 +499,9 @@ footer { width: 100%; padding: 0 2rem 1.5rem; }
     0%, 100% { box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.15), 0 0 0 0 var(--cso); }
     50% { box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.15), 0 0 0 4px rgba(123, 63, 160, 0.25); }
 }
+/* Overflows at sewage treatment works are diamonds; those on the sewer
+   network or at pumping stations are circles. */
+.cso.is-works { --rot: 45deg; border-radius: 2px; }
 @media (prefers-reduced-motion: reduce) { .cso.is-spilling { animation: none; } }
 
 .swatch.cso-swatch::before { left: 6px; right: auto; width: 9px; height: 9px; border-radius: 50%; background: var(--c); }
@@ -614,6 +617,8 @@ footer { width: 100%; padding: 0 2rem 1.5rem; }
     display: inline-flex; align-items: center; justify-content: center; margin-left: 0.25rem;
 }
 .trend-key:first-child { margin-left: 0; }
+.works-key { width: 8px; height: 8px; margin: 0 3px 0 1px; border-radius: 1px; transform: rotate(45deg); background: var(--cso-recent); flex: none; }
+.works-key.is-network { width: 9px; height: 9px; margin: 0 2px 0 0; border-radius: 50%; transform: none; }
 
 .stn-pop-trend { font-size: 0.8rem; font-weight: 500; }
 .stn-pop-trend.is-rising { color: var(--level-high); }

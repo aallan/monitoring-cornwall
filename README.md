@@ -31,6 +31,8 @@ Storm overflows come from South West Water's [storm overflow activity feed](http
 
 Only the overflows spilling now are shown when the page opens; the other tiers are switched on from the legend.
 
+Overflows at sewage treatment works, the inlet overflows and storm tanks, are drawn as diamonds, and those on the sewer network or at pumping stations as circles. In the 2025 annual returns an overflow at a works spilled for 747 hours on average, against 173 hours for the others. The type of each overflow comes from those returns.
+
 An overflow's popup shows its spills over the last 30 days as a timeline, and its spill hours and spill count for each year from the regulatory [annual returns](https://www.arcgis.com/home/item.html?id=66fef44a4aab438991d7ce08fbc1de64).
 
 All of these markers grow as the map zooms in.

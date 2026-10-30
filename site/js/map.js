@@ -470,7 +470,7 @@ const CornwallMap = (() => {
       counts[group]++;
       const icon = L.divIcon({
         className: '', iconSize: [12, 12], iconAnchor: [6, 6],
-        html: `<span class="cso is-${esc(o.state)}"></span>`,
+        html: `<span class="cso is-${esc(o.state)}${o.works ? ' is-works' : ''}"></span>`,
       });
       L.marker([o.lat, o.lon], { icon, title: o.name || o.id, riseOnHover: true,
         zIndexOffset: group === 'now' ? 400 : group === 'recent' ? 200 : 0 })
@@ -598,6 +598,8 @@ const CornwallMap = (() => {
         ${item('csoNow', 'cso-swatch is-spilling', '--cso', 'Spilling now', '<span class="count" id="legend-count-csoNow"></span>')}
         ${item('csoRecent', 'cso-swatch is-recent', '--cso-recent', 'Spilled in last 48 h', '<span class="count" id="legend-count-csoRecent"></span>')}
         ${item('csoQuiet', 'cso-swatch is-quiet', '--cso-quiet', 'Quiet or offline', '<span class="count"><span id="legend-cso-quiet-hint">zoom in · </span><span id="legend-count-csoQuiet"></span></span>')}
+        <div class="legend-key"><span class="works-key"></span>at a treatment works</div>
+        <div class="legend-key"><span class="works-key is-network"></span>on the sewer network</div>
         </div>
         <div class="legend-col">
         ${title('waterways', 'Waterways')}

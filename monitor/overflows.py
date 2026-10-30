@@ -12,6 +12,7 @@ published as a second FeatureServer.
 import gzip
 import json
 import math
+import re
 import time
 import urllib.error
 import urllib.parse
@@ -250,6 +251,13 @@ def state(row, now):
     return "quiet"
 
 
+def at_works(asset_type):
+    """True for an overflow at a sewage treatment works: an inlet overflow or a
+    storm tank, as against one on the sewer network or at a pumping station.
+    The annual returns spell the works 'WwTW'."""
+    return bool(asset_type) and re.search(r"\bwwtw\b", asset_type, re.I) is not None
+
+
 def summary(con, now=None):
     now = int(now or time.time())
     rows = con.execute("""
@@ -262,6 +270,8 @@ def summary(con, now=None):
             entry["name"] = r["name"]
         if r["water"]:
             entry["water"] = r["water"]
+        if at_works(r["asset_type"]):
+            entry["works"] = True
         if r["status_start"]:
             entry["since"] = r["status_start"]
         if r["last_end"] is not None and r["status"] != SPILLING:
