@@ -6,7 +6,7 @@ The site is a single page with no framework and no build step. The server, the r
 
 ## What the map shows
 
-Live readings come from the Environment Agency's [real-time flood-monitoring API](https://environment.data.gov.uk/flood-monitoring/doc/reference), every 15 minutes.
+Live readings come from the Environment Agency's [real-time flood-monitoring API](https://environment.data.gov.uk/flood-monitoring/doc/reference). Stations take a reading every 15 minutes, which the Environment Agency usually publishes within about half an hour, and the server checks for new ones every 5 minutes.
 
 | Layer | Marker | Notes |
 |---|---|---|
@@ -14,7 +14,7 @@ Live readings come from the Environment Agency's [real-time flood-monitoring API
 | Tidal levels | Amber diamond | Height in metres above Ordnance Datum where the station reports it |
 | Rain gauges | Drop | Filled when rain fell in the last hour. Gauges are named after the nearest village |
 
-A marker turns hollow when its station has sent nothing for three hours. Clicking one opens its latest reading and a chart of the last 24 hours, 7 days or 28 days; river levels are drawn against their typical range, and rain as totals per 15 minutes, hour or day.
+A marker turns hollow when its station has sent nothing for three hours. Clicking one opens its latest reading and a chart of the last 24 hours, 7 days or 28 days. A river level's chart starts at zero and runs to 1.25 times the top of its typical range, or higher if the river has been higher in the last 28 days, with a dashed line at the top of the typical range and a dotted one at the record high when that fits. The axis stays the same across all three periods, so they compare by eye. Tidal charts fit the tides recorded, and rain is drawn as totals per 15 minutes, hour or day.
 
 The rest of the map comes from OpenStreetMap.
 
@@ -42,7 +42,7 @@ make data     # build the overlays in site/data
 make serve    # serve the site at http://localhost:8090, polling for readings
 ```
 
-The server's first poll lists the stations, then fetches 28 days of history for each of them, which takes about a quarter of an hour; markers appear when it finishes. Later polls fetch only what's new and take a few seconds. `make poll` runs a single poll without the server.
+The server's first poll lists the stations, then fetches 28 days of history for each of them, four at a time, which takes a few minutes; markers appear when it finishes. Later polls take a few seconds. `make poll` runs a single poll without the server.
 
 `make data` takes a few minutes on a first run, most of it waiting on the public [Overpass API](https://wiki.openstreetmap.org/wiki/Overpass_API) servers. Raw responses are cached in `.cache/overpass/` for a day, so a second run within that window takes seconds. Two flags change that behaviour:
 
@@ -69,7 +69,7 @@ Readings are kept indefinitely. 28 days of readings from all the county's statio
 
 `monitor/` holds the server-side code. Once a day the poller lists the Environment Agency's level and rainfall stations within 110 km of the county, keeps those inside the county boundary or within 1.5 km of it (so the gauges on both banks of the Tamar are included), and reads each river station's published typical range. Stations that have reported nothing in 28 days are left off the map.
 
-Every 15 minutes it makes one request per kind of reading for the latest value from every station in England, and keeps Cornwall's. A station whose newest reading is more than one interval ahead of what's stored has missed polls, and only that station's history is fetched. After each poll the server writes `site/data/live.json`, about 25 KB with every station's latest reading and state, which is everything the map needs to draw its markers. A station's history is fetched from `/api/` only when its popup opens.
+Every 5 minutes it makes one request per kind of reading for the latest value from every station in England, keeps Cornwall's, and writes `site/data/live.json`, about 25 KB with every station's latest reading and state, which is everything the map needs to draw its markers. Then it fills gaps. A station whose newest reading is more than 15 minutes ahead of what was stored has missed readings, because the server was down or because the station uploads in batches, so its history is fetched from its last stored reading, four stations at a time. `live.json` is written again once the gaps are filled. A station's history is fetched from `/api/` only when its popup opens.
 
 Each layer of the map draws as soon as its file arrives, without waiting for the others. Streams, the largest overlay, load the first time the map is zoomed in far enough to show them.
 
@@ -90,7 +90,7 @@ Railway ways are classified by line name, then by `usage` tag. Heritage and tour
 ```
 serve.py                  HTTP server for site/ and /api/, and the poller thread
 monitor/ea.py             Environment Agency client: stations, latest readings, history
-monitor/poll.py           the 15-minute poll cycle
+monitor/poll.py           the 5-minute poll cycle
 monitor/live.py           writes site/data/live.json
 monitor/db.py             SQLite schema and connection
 monitor/geo.py            boundary geometry shared with the overlay builder

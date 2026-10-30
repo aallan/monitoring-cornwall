@@ -20,7 +20,7 @@ make data
 make serve
 ```
 
-Then open [http://localhost:8090](http://localhost:8090). The first poll for live readings fetches four weeks of history and takes about a quarter of an hour; the rest of the map is there straight away.
+Then open [http://localhost:8090](http://localhost:8090). The first poll for live readings fetches four weeks of history for every station, which takes a few minutes; the rest of the map is there straight away.
 
 ## Making a change
 

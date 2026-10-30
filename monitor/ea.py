@@ -12,6 +12,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -46,7 +47,7 @@ def get(path, params=None, retries=3):
     for attempt in range(retries):
         req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT, "Accept-Encoding": "gzip"})
         try:
-            with urllib.request.urlopen(req, timeout=60) as r:
+            with urllib.request.urlopen(req, timeout=30) as r:
                 body = r.read()
                 if r.headers.get("Content-Encoding") == "gzip":
                     body = gzip.decompress(body)
@@ -223,46 +224,50 @@ def store(con, measure, rows):
                     [(measure, ts, v) for ts, v in rows])
 
 
-def backfill(con, measure, since_ts):
-    """Fetch one series from since_ts onwards. The API keeps about four weeks."""
+def fetch_series(measure, since_ts):
+    """Readings for one series from since_ts onwards. The API keeps about four weeks."""
     items = get(f"/id/measures/{urllib.parse.quote(measure)}/readings",
                 {"since": to_iso(since_ts), "_sorted": "", "_limit": 10000})["items"]
     rows = [(to_ts(r["dateTime"]), number(r.get("value"))) for r in items]
-    store(con, measure, [(t, v) for t, v in rows if v is not None])
-    return len(rows)
+    return [(t, v) for t, v in rows if v is not None]
 
 
-def poll_latest(con, history_days=28):
-    """Store the newest reading for every station, and fill any gaps.
-
-    One national 'latest' request per parameter covers every station. A
-    station whose newest reading is more than one interval past what we hold
-    has missed polls, so its series is fetched from the last stored reading.
-    """
+def store_latest(con):
+    """Store the newest reading for every station, from one national request
+    per parameter. Returns {measure: newest timestamp} for the gap check."""
     measures = {r["measure"] for r in con.execute("SELECT measure FROM stations WHERE active = 1")}
+    held = dict(con.execute("SELECT measure, MAX(ts) FROM readings GROUP BY measure").fetchall())
     latest = {}
     for parameter in ("level", "rainfall"):
         for r in get("/data/readings", {"latest": "", "parameter": parameter})["items"]:
             m = r.get("measure", "").rsplit("/", 1)[-1]
             v = number(r.get("value"))
             if m in measures and v is not None and r.get("dateTime"):
-                latest[m] = (to_ts(r["dateTime"]), v)
-
-    held = dict(con.execute("SELECT measure, MAX(ts) FROM readings GROUP BY measure").fetchall())
-    floor = int(time.time()) - history_days * 86400
-    fetched = 0
-    for m in measures:
-        if m not in latest:
-            continue
-        ts, v = latest[m]
-        last = held.get(m)
-        if last is None or ts - last > 900:
-            try:
-                backfill(con, m, max(floor, (last or floor) + 1))
-                fetched += 1
-            except Exception as e:  # noqa: BLE001 - keep polling the rest
-                log(f"backfill failed for {m}: {e}")
-            time.sleep(0.2)
-        store(con, m, [(ts, v)])
+                latest[m] = to_ts(r["dateTime"])
+                store(con, m, [(latest[m], v)])
     con.commit()
-    return len(latest), fetched
+    return latest, held
+
+
+def fill_gaps(con, latest, held, history_days=28, workers=4):
+    """Fetch the history of any station that has readings we don't hold.
+
+    A station whose newest reading is more than one 15-minute interval past
+    what we held before this poll has missed readings: we missed polls, or
+    the station uploads in batches. Its series is fetched from the last
+    reading we held, a few stations at a time.
+    """
+    floor = int(time.time()) - history_days * 86400
+    todo = {m: max(floor, (held[m] + 1) if m in held else floor)
+            for m, ts in latest.items() if m not in held or ts - held[m] > 900}
+    if not todo:
+        return 0
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        futures = {pool.submit(fetch_series, m, since): m for m, since in todo.items()}
+        for f in as_completed(futures):
+            try:
+                store(con, futures[f], f.result())
+            except Exception as e:  # noqa: BLE001 - keep the rest
+                log(f"history fetch failed for {futures[f]}: {e}")
+    con.commit()
+    return len(todo)

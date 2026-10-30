@@ -412,6 +412,7 @@ footer { width: 100%; padding: 0 2rem 1.5rem; }
 .stn-pop-ranges .btn-toggle { padding: 0.2rem 0.55rem; font-size: 0.72rem; border-radius: 6px; }
 .stn-pop-chart { min-height: 150px; }
 .stn-pop-chart.loading { opacity: 0.4; }
+.stn-pop-key { font-size: 0.72rem; color: var(--text-tertiary); }
 .stn-pop-readout { min-height: 1.2em; font-size: 0.72rem; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
 .stn-pop-source { margin-top: 0.35rem; font-size: 0.68rem; color: var(--text-tertiary); }
 
@@ -419,7 +420,9 @@ footer { width: 100%; padding: 0 2rem 1.5rem; }
 .stn-chart { display: block; width: 100%; height: auto; overflow: visible; }
 .stn-grid { stroke: var(--border); stroke-width: 1; }
 .stn-axis { fill: var(--text-tertiary); font-size: 9px; font-family: var(--font); font-variant-numeric: tabular-nums; }
-.stn-band { fill: var(--up-light); }
+.stn-ref { stroke-width: 1.2; }
+.stn-ref-high { stroke: var(--level-high); stroke-dasharray: 5 4; }
+.stn-ref-record { stroke: var(--text-tertiary); stroke-dasharray: 1 3; }
 .stn-line { fill: none; stroke-width: 1.6; stroke-linejoin: round; stroke-linecap: round; }
 .stn-line-level { stroke: var(--water); }
 .stn-line-tidal { stroke: var(--tidal); }

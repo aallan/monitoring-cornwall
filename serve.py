@@ -2,7 +2,7 @@
 """Server for Monitoring Cornwall.
 
 Serves the site in site/, answers /api/ requests for station history, and
-polls the Environment Agency every 15 minutes in a background thread.
+polls the Environment Agency every 5 minutes in a background thread.
 Standard library only.
 
     python3 serve.py              # http://localhost:8090
@@ -102,6 +102,7 @@ class Handler(SimpleHTTPRequestHandler):
         self.send_json({
             "id": s["id"], "kind": s["kind"], "name": s["name"], "unit": s["unit"],
             "typical": [s["typical_low"], s["typical_high"]] if s["kind"] == "level" else None,
+            "record": s["max_on_record"] if s["kind"] == "level" else None,
             "days": days,
             "readings": [[r["ts"], r["value"]] for r in rows],
         })

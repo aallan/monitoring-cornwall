@@ -1,6 +1,6 @@
 """Poll the Environment Agency for new readings.
 
-    python3 -m monitor.poll           # poll every 15 minutes
+    python3 -m monitor.poll           # poll every 5 minutes
     python3 -m monitor.poll --once    # one cycle, then exit
 
 serve.py runs the same loop in a background thread, so a deployment needs
@@ -13,7 +13,10 @@ import time
 
 from . import db, ea, live
 
-INTERVAL = 15 * 60
+# Stations report every 15 minutes but not in step, and the EA publishes each
+# reading some minutes after it is taken, so polling more often than the
+# reporting interval shortens the wait for each new reading.
+INTERVAL = 5 * 60
 STATION_REFRESH = 24 * 3600
 
 
@@ -26,11 +29,16 @@ def cycle():
             db.set_meta(con, "stations_refreshed", int(time.time()))
             con.commit()
             ea.log(f"station list refreshed: {n} stations")
-        seen, backfilled = ea.poll_latest(con)
+        # The latest readings go to the map first; filling gaps can take a
+        # while when several stations need their history fetched.
+        latest, held = ea.store_latest(con)
         db.set_meta(con, "last_poll", int(time.time()))
         con.commit()
         live.write(con)
-        ea.log(f"poll: {seen} latest readings, {backfilled} series backfilled")
+        filled = ea.fill_gaps(con, latest, held)
+        if filled:
+            live.write(con)
+        ea.log(f"poll: {len(latest)} latest readings, {filled} series filled in")
     finally:
         con.close()
 

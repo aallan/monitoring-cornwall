@@ -83,6 +83,30 @@ const StationPopup = (() => {
     return ticks;
   }
 
+  // Round an axis out to whole tick steps, so its ends carry labels.
+  function niceScale(lo, hi) {
+    const ticks = niceTicks(lo, hi);
+    const step = ticks.length > 1 ? ticks[1] - ticks[0] : (hi - lo) || 1;
+    const nlo = Math.floor(lo / step + 1e-9) * step;
+    const nhi = Math.ceil(hi / step - 1e-9) * step;
+    return { lo: nlo, hi: nhi, ticks: niceTicks(nlo, nhi) };
+  }
+
+  // The level axis for a station, fixed across the 24-hour, 7-day and
+  // 28-day views so they compare by eye. River levels start at zero and run
+  // to 1.25 times the top of the typical range, or higher if the river has
+  // been higher; tidal gauges fit the tides they've recorded.
+  function levelAxis(s, data) {
+    const vals = data.readings.map(r => r[1]);
+    const dataLo = Math.min(...vals), dataHi = Math.max(...vals);
+    if (s.kind === 'tidal') {
+      const pad = (dataHi - dataLo) * 0.08 || 0.1;
+      return niceScale(dataLo - pad, dataHi + pad);
+    }
+    const high = data.typical ? data.typical[1] : null;
+    return niceScale(Math.min(0, dataLo), Math.max(high != null ? high * 1.25 : 0, dataHi * 1.1, 0.1));
+  }
+
   // Ticks at UK local hours, found hour by hour so that the change between
   // GMT and BST never shifts them: every 6 hours over a day, midnights over a
   // week, and Monday midnights over four weeks.
@@ -105,7 +129,7 @@ const StationPopup = (() => {
     return d.toLocaleDateString('en-GB', { timeZone: TZ, day: 'numeric', month: 'short' });
   }
 
-  function drawChart(host, readout, s, data, days) {
+  function drawChart(host, readout, key, s, data, days) {
     host.textContent = '';
     const now = Math.floor(Date.now() / 1000);
     const from = now - days * 86400;
@@ -114,31 +138,27 @@ const StationPopup = (() => {
     host.appendChild(svg);
     const x = t => M.l + (t - from) / (now - from) * (W - M.l - M.r);
 
-    let points, lo, hi, barWidth = 0;
+    let points, axis, barWidth = 0;
     if (s.kind === 'rain') {
       const { size, bars } = rainBuckets(data.readings, days, from);
       points = bars;
-      lo = 0;
-      hi = Math.max(1, ...bars.map(b => b[1]));
+      axis = niceScale(0, Math.max(1, ...bars.map(b => b[1])));
       barWidth = Math.max(1, (x(from + size) - x(from)) - 1);
     } else {
       points = data.readings.filter(r => r[0] > from);
-      const vals = points.map(r => r[1]);
-      const typical = (data.typical || []).filter(v => v != null);
-      lo = Math.min(...vals, ...typical);
-      hi = Math.max(...vals, ...typical);
-      const pad = (hi - lo) * 0.1 || 0.1;
-      lo -= pad; hi += pad;
+      if (data.readings.length) axis = levelAxis(s, data);
     }
+    key.textContent = chartKey(s, data, days);
     if (!points.length) {
       el('text', { x: W / 2, y: H / 2, 'text-anchor': 'middle', class: 'stn-chart-empty' }, svg)
         .textContent = 'No readings in this period';
       return;
     }
+    const { lo, hi } = axis;
     const y = v => M.t + (1 - (v - lo) / (hi - lo)) * (H - M.t - M.b);
 
     // Grid and axes
-    for (const v of niceTicks(lo, hi)) {
+    for (const v of axis.ticks) {
       el('line', { x1: M.l, x2: W - M.r, y1: y(v), y2: y(v), class: 'stn-grid' }, svg);
       el('text', { x: M.l - 5, y: y(v) + 3, 'text-anchor': 'end', class: 'stn-axis' }, svg).textContent =
         v.toLocaleString('en-GB', { maximumFractionDigits: 2 });
@@ -148,10 +168,14 @@ const StationPopup = (() => {
       el('text', { x: x(t), y: H - 6, 'text-anchor': 'middle', class: 'stn-axis' }, svg).textContent = tickLabel(t, days);
     }
 
-    // Typical range band for river levels
-    if (s.kind === 'level' && data.typical && data.typical[0] != null && data.typical[1] != null) {
-      const top = y(data.typical[1]), bottom = y(data.typical[0]);
-      el('rect', { x: M.l, y: top, width: W - M.l - M.r, height: Math.max(0, bottom - top), class: 'stn-band' }, svg);
+    // Reference lines for river levels: the top of the typical range, and
+    // the record high when it falls within the axis.
+    const refLine = (v, cls) => {
+      if (v != null && v >= lo && v <= hi) el('line', { x1: M.l, x2: W - M.r, y1: y(v), y2: y(v), class: cls }, svg);
+    };
+    if (s.kind === 'level') {
+      refLine(data.record, 'stn-ref stn-ref-record');
+      refLine(data.typical && data.typical[1], 'stn-ref stn-ref-high');
     }
 
     if (s.kind === 'rain') {
@@ -172,10 +196,8 @@ const StationPopup = (() => {
 
     // Hover readout
     const cursor = el('line', { y1: M.t, y2: H - M.b, class: 'stn-cursor', visibility: 'hidden' }, svg);
-    const caption = s.kind === 'rain'
-      ? `${days <= 1 ? 'per 15 minutes' : days <= 7 ? 'per hour' : 'per day'}`
-      : '';
-    readout.textContent = caption ? `Rainfall ${caption}` : '';
+    const caption = s.kind === 'rain' ? rainBucketText(days) : '';
+    readout.textContent = '';
     svg.addEventListener('mousemove', e => {
       const box = svg.getBoundingClientRect();
       const t = from + ((e.clientX - box.left) * W / box.width - M.l) / (W - M.l - M.r) * (now - from);
@@ -189,8 +211,20 @@ const StationPopup = (() => {
     });
     svg.addEventListener('mouseleave', () => {
       cursor.setAttribute('visibility', 'hidden');
-      readout.textContent = caption ? `Rainfall ${caption}` : '';
+      readout.textContent = '';
     });
+  }
+
+  const rainBucketText = days => (days <= 1 ? 'per 15 minutes' : days <= 7 ? 'per hour' : 'per day');
+
+  // The line under each chart that says what it shows.
+  function chartKey(s, data, days) {
+    if (s.kind === 'rain') return `Rainfall ${rainBucketText(days)}`;
+    if (s.kind === 'tidal') return s.unit === 'mAOD' ? 'Height above Ordnance Datum' : 'Height at the gauge';
+    const high = data.typical ? data.typical[1] : null;
+    if (high == null) return 'No typical range published for this gauge';
+    const record = data.record != null ? ` · record ${fmtValue(s, data.record)}` : '';
+    return `Dashed line: top of typical range, ${fmtValue(s, high)}${record}`;
   }
 
   // Popup ----------------------------------------------------------------------
@@ -224,8 +258,9 @@ const StationPopup = (() => {
 
     const tabs = node('div', 'stn-pop-ranges');
     const chartHost = node('div', 'stn-pop-chart');
+    const key = node('div', 'stn-pop-key');
     const readout = node('div', 'stn-pop-readout');
-    box.append(tabs, chartHost, readout);
+    box.append(tabs, chartHost, key, readout);
     box.appendChild(node('div', 'stn-pop-source', `Environment Agency station ${s.id}`));
 
     let current = 7;
@@ -233,7 +268,7 @@ const StationPopup = (() => {
       chartHost.classList.add('loading');
       load(s.id).then(data => {
         chartHost.classList.remove('loading');
-        drawChart(chartHost, readout, s, data, current);
+        drawChart(chartHost, readout, key, s, data, current);
       }).catch(() => {
         chartHost.classList.remove('loading');
         chartHost.textContent = 'History is unavailable right now.';
