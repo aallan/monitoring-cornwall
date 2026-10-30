@@ -6,11 +6,18 @@
 const CornwallMap = (() => {
   const DATA = 'data/';
 
-  // Mainland Cornwall; Scilly is reachable by panning.
-  const CORNWALL_BOUNDS = [[49.95, -5.76], [50.94, -4.16]];
+  // Points around the edge of mainland Cornwall and of the Isles of Scilly:
+  // the opening view keeps all of them on screen and clear of the legend.
+  const MAINLAND = [
+    [50.94, -4.53], [50.83, -4.56], [50.55, -5.03], [50.42, -5.10], [50.32, -5.23], [50.22, -5.48],
+    [50.17, -5.68], [50.07, -5.72], [49.96, -5.21], [50.22, -4.80], [50.33, -4.64], [50.35, -4.45],
+    [50.31, -4.22], [50.40, -4.20], [50.53, -4.16], [50.64, -4.30], [50.93, -4.45],
+    // and inland, so that the legend can't hide the middle of the county
+    [50.83, -4.50], [50.64, -4.36], [50.62, -4.68], [50.50, -4.32], [50.45, -4.47], [50.47, -4.72],
+    [50.41, -4.67], [50.34, -4.79], [50.40, -4.95], [50.26, -5.05], [50.21, -5.30], [50.12, -5.45],
+  ];
+  const SCILLY = [[49.98, -6.35], [49.89, -6.45], [49.86, -6.32], [49.92, -6.25]];
   // Loose enough that the opening view can sit Cornwall beside the legend.
-  // Mainland Cornwall with the Isles of Scilly, for centring when there's room.
-  const WITH_SCILLY = [[49.86, -6.45], [50.94, -4.16]];
   const MAX_BOUNDS = [[49.3, -7.6], [51.6, -2.4]];
 
   const MAJOR_RIVER_KM = 20;     // rivers at least this long are labelled first
@@ -789,28 +796,79 @@ const CornwallMap = (() => {
   // Fit Cornwall the first time the map is visible. Fitting while the view is
   // hidden (zero size) would zoom all the way in.
   let fitted = false;
-  // Zoom is whole levels only. Round up when that crops only a little (within
-  // 0.2 of a level, about 15%), since a slight crop beats a small county;
-  // otherwise round down, so a big screen shows the whole county.
-  // An open legend on the right takes its width out of the space the county
-  // is fitted and centred in, so the legend doesn't sit over the county.
+
+  // The opening view: the highest whole zoom level at which the outline is
+  // all on screen and clear of the zoom buttons and attribution. The open
+  // legend may sit over open sea, and over a corner of the mainland: no more
+  // than LEGEND_POINTS of the mainland's points, none deeper than
+  // LEGEND_DEPTH of the county's width in from its edges, and never over
+  // Scilly. At each zoom the placement covering least is used, the most
+  // central of those.
+  const LEGEND_POINTS = 3;
+  const LEGEND_DEPTH = 0.1;
+  function openingView(mainland, islands, size, hard, soft, minZoom, maxZoom) {
+    const M = 12;
+    const inside = (x, y, r, m) => x > r.left - m && x < r.right + m && y > r.top - m && y < r.bottom + m;
+    const outline = mainland.concat(islands);
+    for (let z = maxZoom; z >= minZoom; z--) {
+      const pts = outline.map(p => map.project(p, z));
+      const minX = Math.min(...pts.map(p => p.x)), maxX = Math.max(...pts.map(p => p.x));
+      const minY = Math.min(...pts.map(p => p.y)), maxY = Math.max(...pts.map(p => p.y));
+      const w = maxX - minX, h = maxY - minY;
+      if (w > size.x - 2 * M || h > size.y - 2 * M) continue;
+      // Offsets from the centre back to the margin, ending on the margin itself.
+      const steps = from => { const out = []; for (let v = from; v > M; v -= 8) out.push(v); out.push(M); return out; };
+      let best = null;
+      for (const ox of steps((size.x - w) / 2)) {
+        for (const oy of steps((size.y - h) / 2)) {
+          // How many points the legend covers, and how far in it reaches.
+          let covered = 0, depth = 0, ok = true;
+          pts.forEach((p, i) => {
+            const x = p.x - minX + ox, y = p.y - minY + oy;
+            if (hard.some(r => inside(x, y, r, M))) ok = false;
+            for (const r of soft) {
+              if (!inside(x, y, r, 0)) continue;
+              if (i >= mainland.length) ok = false;   // an island
+              covered++;
+              depth = Math.max(depth, Math.min(x - r.left, y - r.top));
+            }
+          });
+          const better = !best || covered < best.covered || (covered === best.covered && depth < best.depth);
+          if (ok && covered <= LEGEND_POINTS && depth <= LEGEND_DEPTH * w && better) best = { ox, oy, covered, depth };
+          if (best && best.covered === 0) break;
+        }
+        if (best && best.covered === 0) break;
+      }
+      if (best) {
+        const centre = L.point(minX - best.ox + size.x / 2, minY - best.oy + size.y / 2);
+        return { centre: map.unproject(centre, z), zoom: z };
+      }
+    }
+    return null;
+  }
+
   function fitIfVisible() {
     if (fitted || !map || map.getSize().x === 0) return;
-    const legend = map.getContainer().querySelector('.leaflet-right .map-legend:not(.collapsed)');
-    let side = legend ? legend.offsetWidth + 20 : 0;
-    if (map.getSize().x - side < 360) side = 0;  // too narrow to share; fit the whole map
-    const snap = map.options.zoomSnap;
-    map.options.zoomSnap = 0;
-    const exact = map.getBoundsZoom(CORNWALL_BOUNDS, false, L.point(side, 0));
-    map.options.zoomSnap = snap;
-    const zoom = Math.ceil(exact) - exact <= 0.2 ? Math.ceil(exact) : Math.floor(exact);
-    // Centre on the mainland and Scilly together if both fit beside the
-    // legend at this zoom; otherwise on the mainland alone.
-    const span = b => map.project(b.getNorthEast(), zoom).x - map.project(b.getSouthWest(), zoom).x;
-    const withScilly = L.latLngBounds(WITH_SCILLY);
-    const target = span(withScilly) <= map.getSize().x - side - 20 ? withScilly : L.latLngBounds(CORNWALL_BOUNDS);
-    const centre = map.project(target.getCenter(), zoom).add([side / 2, 0]);
-    map.setView(map.unproject(centre, zoom), zoom, { animate: false });
+    const box = map.getContainer().getBoundingClientRect();
+    const rect = el => {
+      const r = el.getBoundingClientRect();
+      return { left: r.left - box.left, right: r.right - box.left, top: r.top - box.top, bottom: r.bottom - box.top };
+    };
+    const c = map.getContainer();
+    const hard = [...c.querySelectorAll('.map-legend.collapsed, .leaflet-control-zoom, .leaflet-control-attribution')].map(rect);
+    const soft = [...c.querySelectorAll('.map-legend:not(.collapsed)')].map(rect);
+    // Scilly too where everything fits, as on most screens; on a phone, the
+    // mainland filling the screen rather than both, small.
+    const size = map.getSize(), min = map.getMinZoom();
+    const view = openingView(MAINLAND, SCILLY, size, hard, soft, min, 11)
+      || openingView(MAINLAND, [], size, hard, soft, min, 11)
+      || openingView(MAINLAND, [], size, [], [], min, 11);
+    // The panning limit is set after the opening view, and takes it in, so it
+    // never pulls the view back over the legend.
+    map.setMaxBounds(null);
+    if (view) map.setView(view.centre, view.zoom, { animate: false });
+    else map.fitBounds(L.latLngBounds(MAINLAND), { animate: false });
+    map.setMaxBounds(L.latLngBounds(MAX_BOUNDS).extend(map.getBounds()));
     fitted = true;
   }
 

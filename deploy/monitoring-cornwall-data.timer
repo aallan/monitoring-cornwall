@@ -1,0 +1,12 @@
+# Rebuild the overlays early every Sunday, to pick up OpenStreetMap edits.
+
+[Unit]
+Description=Weekly rebuild of the Monitoring Cornwall map overlays
+
+[Timer]
+OnCalendar=Sun *-*-* 04:30:00
+RandomizedDelaySec=30min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

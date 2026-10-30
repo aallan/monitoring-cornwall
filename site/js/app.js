@@ -38,7 +38,7 @@ function showLiveStatus(live) {
     timeZone: 'Europe/London', weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
   });
   const delayed = Date.now() / 1000 - newest > 3600 ? ' (delayed)' : '';
-  $('#status').textContent = `Latest readings ${when}${delayed} · Environment Agency`;
+  $('#status').textContent = `Latest readings ${when}${delayed}`;
 }
 
 document.addEventListener('DOMContentLoaded', () => {

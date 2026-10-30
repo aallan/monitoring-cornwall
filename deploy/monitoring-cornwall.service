@@ -1,0 +1,34 @@
+# The web server and its poller, run as the unprivileged 'monitor' user.
+# Install with: sudo cp deploy/*.service deploy/*.timer /etc/systemd/system/
+
+[Unit]
+Description=Monitoring Cornwall web server and poller
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=monitor
+Group=monitor
+WorkingDirectory=/srv/monitoring-cornwall
+# Settings that don't belong in the repository, such as API keys, go here.
+EnvironmentFile=-/etc/monitoring-cornwall.env
+Environment=PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1
+ExecStart=/usr/bin/python3 serve.py 8090
+Restart=always
+RestartSec=5
+
+# The process can write only to its data directories.
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+ReadWritePaths=/srv/monitoring-cornwall/data /srv/monitoring-cornwall/site/data /srv/monitoring-cornwall/.cache
+
+[Install]
+WantedBy=multi-user.target

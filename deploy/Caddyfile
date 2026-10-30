@@ -1,0 +1,16 @@
+# Caddy serves the site over HTTPS, getting and renewing certificates for
+# every name below once their DNS points at this server. Install with:
+#   sudo cp deploy/Caddyfile /etc/caddy/Caddyfile && sudo systemctl reload caddy
+
+cornwall.watch {
+	encode zstd gzip
+	reverse_proxy 127.0.0.1:8090 {
+		header_down -Server
+	}
+	header Strict-Transport-Security "max-age=31536000"
+}
+
+# The other names redirect, keeping the path.
+www.cornwall.watch, kernow.watch, www.kernow.watch {
+	redir https://cornwall.watch{uri} permanent
+}

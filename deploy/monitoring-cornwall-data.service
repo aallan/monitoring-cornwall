@@ -1,0 +1,22 @@
+# Rebuilds the map overlays from OpenStreetMap; started weekly by
+# monitoring-cornwall-data.timer, or by hand with
+#   sudo systemctl start monitoring-cornwall-data
+
+[Unit]
+Description=Monitoring Cornwall map overlays from OpenStreetMap
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=monitor
+Group=monitor
+WorkingDirectory=/srv/monitoring-cornwall
+Environment=PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1
+ExecStart=/usr/bin/make data
+
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ReadWritePaths=/srv/monitoring-cornwall/data /srv/monitoring-cornwall/site/data /srv/monitoring-cornwall/.cache

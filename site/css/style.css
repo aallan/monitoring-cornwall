@@ -171,19 +171,22 @@ body {
 }
 
 /* ---------- Header ---------- */
-/* Header, main and footer share one full-width left edge on every tab, so
+/* One row: the title, the tabs, then the status line and buttons on the
+   right, with the active tab's underline on the header's bottom edge.
+   Header, main and footer share one full-width left edge on every tab, so
    nothing shifts sideways when switching between Map and About. */
-header { padding: 1.5rem 2rem 0; width: 100%; }
-.header-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem; }
+header { padding: 0 2rem; width: 100%; border-bottom: 1px solid var(--border); }
+.header-row { display: flex; align-items: stretch; gap: 1.5rem; min-height: 3.25rem; }
+.header-row > h1, .header-row > .header-buttons, .header-row > .status-line { align-self: center; }
 header h1 {
     font-size: 1.1rem; font-weight: 600; letter-spacing: 0.02em; color: var(--text);
-    display: flex; align-items: center; gap: 0.5rem;
+    display: flex; align-items: center; gap: 0.5rem; white-space: nowrap; flex: none;
 }
 header h1 .ticker {
     font-size: 0.7rem; font-weight: 600; letter-spacing: 0.08em; color: var(--text-on-dark);
     background: var(--accent); padding: 0.1rem 0.4rem; border-radius: 5px;
 }
-.header-buttons { display: flex; gap: 0.4rem; align-items: center; }
+.header-buttons { display: flex; gap: 0.4rem; align-items: center; flex: none; }
 .header-btn, .theme-toggle {
     background: var(--bg-card); border: 1px solid var(--border); border-radius: 20px;
     width: 2.25rem; height: 2.25rem; cursor: pointer; font-size: 1.1rem; color: var(--text-secondary);
@@ -197,18 +200,18 @@ header h1 .ticker {
     :root:not([data-theme="light"]) .theme-toggle::after { content: '\2600'; }
 }
 .status-line {
-    font-size: 0.78rem; color: var(--text-tertiary); margin-bottom: 0.6rem;
-    font-variant-numeric: tabular-nums; min-height: 1em;
+    font-size: 0.78rem; color: var(--text-tertiary); font-variant-numeric: tabular-nums;
+    margin-left: auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
 /* ---------- Nav ---------- */
-nav { display: flex; gap: 0.25rem; border-bottom: 1px solid var(--border); overflow-x: auto; scrollbar-width: none; }
+nav { display: flex; gap: 0.25rem; overflow-x: auto; scrollbar-width: none; flex: none; }
 nav::-webkit-scrollbar { display: none; }
 .nav-btn {
     background: none; border: none; padding: 0.5rem 0.75rem; font: inherit; font-size: 0.875rem;
     color: var(--text-secondary); cursor: pointer; border-bottom: 2px solid transparent;
     margin-bottom: -1px; transition: color 0.15s, border-color 0.15s; white-space: nowrap;
-    flex-shrink: 0; text-decoration: none; display: inline-block;
+    flex-shrink: 0; text-decoration: none; display: flex; align-items: center;
 }
 .nav-btn:hover { color: var(--text); }
 .nav-btn.active { color: var(--text); border-bottom-color: var(--text); }
@@ -232,8 +235,11 @@ body.map-mode footer { display: none; }
        so the header never changes size when switching. The snapshot date is
        repeated on the About tab. */
     .status-line { display: none; }
-    header { padding-top: 1rem; }
-    .header-row { margin-bottom: 0.4rem; }
+    header { padding: 0 1rem; }
+    /* The tabs take a row of their own under the title and buttons. */
+    .header-row { flex-wrap: wrap; row-gap: 0; column-gap: 0.75rem; min-height: 0; padding-top: 0.6rem; }
+    .header-row > .header-buttons { margin-left: auto; }
+    .header-row > nav { order: 1; flex: 1 0 100%; margin-left: -0.75rem; }
 }
 
 /* ---------- Sections / panels ---------- */
@@ -255,6 +261,20 @@ body.map-mode footer { display: none; }
 .data-table td.num { white-space: nowrap; }
 .data-table td { padding: 0.55rem 0.75rem; border-bottom: 1px solid var(--border); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; vertical-align: top; }
 .data-table tr:last-child td { border-bottom: none; }
+/* Data sources: the layer and licence columns keep their words whole, and
+   the source column takes the rest. */
+.data-table.sources td { overflow-wrap: normal; }
+.data-table.sources td:first-child { width: 12rem; }
+.data-table.sources td:last-child { white-space: nowrap; }
+
+/* About: what's on the map, as labelled paragraphs. */
+.about-list { display: grid; grid-template-columns: 9rem 1fr; gap: 0.6rem 1.25rem; font-size: 0.875rem; margin: 0; }
+.about-list dt { font-weight: 600; }
+.about-list dd { margin: 0; }
+@media (max-width: 640px) {
+    .about-list { grid-template-columns: 1fr; gap: 0.15rem; }
+    .about-list dd { margin-bottom: 0.6rem; }
+}
 .muted { color: var(--text-tertiary); }
 
 /* ---------- Map ---------- */
@@ -345,7 +365,8 @@ body.map-mode footer { display: none; }
        the width the wider one needs, so the two match. */
     display: grid; grid-template-columns: 1fr 1fr; column-gap: 1.25rem;
 }
-.legend-col { min-width: 0; }
+/* Rows never wrap: the columns grow to fit the longest. */
+.legend-col { min-width: max-content; }
 .legend-hint {
     grid-column: 1 / -1; margin: 0.3rem 0 0.15rem; font-size: 0.72rem; line-height: 1.35;
     color: var(--text-tertiary);
@@ -365,7 +386,7 @@ body.map-mode footer { display: none; }
     display: flex; align-items: center; gap: 0.55rem; width: 100%;
     background: none; border: none; font: inherit; font-size: 0.8rem; color: var(--text);
     padding: 0.18rem 0.1rem; cursor: pointer; text-align: left; border-radius: 4px;
-    transition: background 0.15s, color 0.15s;
+    transition: background 0.15s, color 0.15s; white-space: nowrap;
 }
 .legend-item:hover { background: var(--bg-hover); }
 .legend-item.off { color: var(--text-tertiary); }

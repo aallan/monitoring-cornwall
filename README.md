@@ -1,6 +1,6 @@
 # Monitoring Cornwall
 
-A map of Cornwall's rivers, streams, railways and major roads, built from [OpenStreetMap](https://www.openstreetmap.org/) data, with the Environment Agency's flood warnings and alerts, live readings from its river level, tidal and rain gauges, and South West Water's storm overflow monitors. It's a companion to [Floodwatch](https://github.com/aallan/floodwatch), which monitors the River Taw catchment in Devon at [tawriver.watch](https://tawriver.watch).
+Monitoring Cornwall shows which of the county's rivers are high and rising, which storm overflows are spilling, how clean the water is at each beach, and what the rain and the rivers are forecast to do next. It brings the Environment Agency's gauges, flood warnings and bathing waters, South West Water's storm overflow monitors, Met Office observations at sea and Open-Meteo's forecasts together on one map of Cornwall, drawn from [OpenStreetMap](https://www.openstreetmap.org/). It's a companion to [Floodwatch](https://github.com/aallan/floodwatch), which monitors the River Taw catchment in Devon at [tawriver.watch](https://tawriver.watch).
 
 The site is a single page with no framework and no build step. The server, the readings poller and the map data pipeline use only the Python standard library, with readings kept in SQLite.
 
@@ -80,15 +80,67 @@ python3 scripts/fetch_geodata.py --cached    # rebuild from the cache, however o
 
 Monitoring Cornwall runs as one self-contained process on a single server, and its data lives there with it. Nothing generated is committed to this repository: Leaflet and the map overlays are built on the machine that serves the site, by `make libs` and `make data`, and readings collect in `data/monitor.db`.
 
-`serve.py` is a small threaded HTTP server. It serves `site/`, answers `/api/stations/<id>/readings?days=N`, `/api/overflows/<id>` and `/api/marine/<id>?days=N` from the database, `/api/forecast/rain/<id>` and `/api/forecast/flow/<id>` from Open-Meteo, and `/api/bathing/<id>` from the Environment Agency, and polls the Environment Agency in a background thread; `--no-poll` turns the poller off where something else runs `python3 -m monitor.poll`. It binds to `localhost` on port 8090 by default; `--bind` and a port argument change both.
+`serve.py` is a small threaded HTTP server. It serves `site/`, answers `/api/stations/<id>/readings?days=N`, `/api/overflows/<id>` and `/api/marine/<id>?days=N` from the database, `/api/forecast/rain/<id>` and `/api/forecast/flow/<id>` from Open-Meteo, and `/api/bathing/<id>` from the Environment Agency, and polls the Environment Agency in a background thread; `--no-poll` turns the poller off where something else runs `python3 -m monitor.poll`. It binds to `localhost` on port 8090 by default; `--bind` and a port argument change both. Every response includes a Content Security Policy that allows scripts, styles and data from the site's own origin, plus basemap tiles from `server.arcgisonline.com`, and nothing else.
 
-```bash
-python3 serve.py 8090 --bind ::
+Readings are kept indefinitely. 28 days of readings from all the county's stations take about 34 MB, so a year takes roughly 450 MB. The overflow spill log and the offshore observations are built up by polling and can't be fetched again, so the database is worth backing up.
+
+### On a server
+
+The public site runs on an Ubuntu 24.04 server, with [Caddy](https://caddyserver.com/) in front for HTTPS. `deploy/` holds the configuration:
+
+```
+deploy/monitoring-cornwall.service       the web server and poller, as a systemd service
+deploy/monitoring-cornwall-data.service  rebuilds the map overlays from OpenStreetMap
+deploy/monitoring-cornwall-data.timer    runs that rebuild every Sunday morning
+deploy/Caddyfile                         HTTPS for cornwall.watch, and redirects from the other names
 ```
 
-Every response includes a Content Security Policy that allows scripts, styles and data from the site's own origin, plus basemap tiles from `server.arcgisonline.com`, and nothing else. For a public deployment, put it behind a reverse proxy that terminates TLS, and rerun `make data` from cron to pick up OpenStreetMap edits. Weekly is plenty; rivers and railways change slowly.
+The server needs about 40 MB of memory and the overlay rebuild about 160 MB, so the smallest server is enough. Point the domain's DNS at the server first, A and AAAA records for the bare name and `www`, so Caddy can get its certificates when it starts. Then, as root:
 
-Readings are kept indefinitely. 28 days of readings from all the county's stations take about 34 MB, so a year takes roughly 450 MB.
+```bash
+apt update && apt install -y git make curl gnupg python3 debian-keyring debian-archive-keyring apt-transport-https
+curl -1sLf https://dl.cloudsmith.io/public/caddy/stable/gpg.key | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+curl -1sLf https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt > /etc/apt/sources.list.d/caddy-stable.list
+apt update && apt install -y caddy
+
+useradd --system --no-create-home --home-dir /srv/monitoring-cornwall --shell /usr/sbin/nologin monitor
+install -d -o monitor -g monitor /srv/monitoring-cornwall
+cd /srv/monitoring-cornwall
+runuser -u monitor -- git clone https://github.com/aallan/monitoring-cornwall.git .
+runuser -u monitor -- make libs
+runuser -u monitor -- make data
+
+cp deploy/*.service deploy/*.timer /etc/systemd/system/
+systemctl daemon-reload
+systemctl enable --now monitoring-cornwall monitoring-cornwall-data.timer
+cp deploy/Caddyfile /etc/caddy/Caddyfile
+systemctl reload caddy
+
+ufw allow OpenSSH && ufw allow 80/tcp && ufw allow 443 && ufw --force enable
+```
+
+The first `make data` can take half an hour or more when the public Overpass servers are busy. Each finished query is cached, so if it gives up, running it again carries on from there. To skip the download, copy the cache from a machine that has already run `make data`, and build from it on the server:
+
+```bash
+rsync -a .cache/overpass/ root@your-server:/srv/monitoring-cornwall/.cache/overpass/
+```
+
+```bash
+cd /srv/monitoring-cornwall && chown -R monitor:monitor .cache
+runuser -u monitor -- python3 scripts/fetch_geodata.py --cached
+```
+
+The service runs as the unprivileged `monitor` user and can write only to `data/`, `site/data/` and `.cache/`. Settings that don't belong in the repository, such as API keys, go in `/etc/monitoring-cornwall.env`, readable only by root, which the service reads at start. Its log is in the journal:
+
+```bash
+journalctl -u monitoring-cornwall -f
+```
+
+To update, pull and restart:
+
+```bash
+cd /srv/monitoring-cornwall && runuser -u monitor -- git pull && systemctl restart monitoring-cornwall
+```
 
 ## How live readings are collected
 
@@ -122,7 +174,7 @@ In the Tamar's cell the model has about half the river's gauged flow, so its flo
 
 ## How the map loads
 
-Each layer of the map draws as soon as its file arrives, without waiting for the others. Streams, the largest overlay, load the first time the map is zoomed in far enough to show them.
+The map opens on mainland Cornwall and the Isles of Scilly at the closest zoom that shows both. The legend can sit over open sea and over a small corner of the mainland, usually the Rame peninsula, but not over Scilly or the rest of the county. On a phone, where both won't fit, it opens on the mainland. Each layer of the map draws as soon as its file arrives, without waiting for the others. Streams, the largest overlay, load the first time the map is zoomed in far enough to show them.
 
 ## How the overlays are built
 
@@ -167,6 +219,7 @@ site/js/app.js            tab routing and the status line
 site/js/utils.js          escaping, formatting and the theme toggle
 tests/                    Python tests (unittest), one file per module
 tests/js/                 JavaScript tests (node --test)
+deploy/                   systemd units and Caddy configuration for a server
 ```
 
 ## Contributing
