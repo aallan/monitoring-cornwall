@@ -475,6 +475,264 @@ const StationPopup = (() => {
       .openOn(map);
   }
 
+  // Bathing waters ---------------------------------------------------------------
+  const BW_CLASS = { Excellent: 'excellent', Good: 'good', Sufficient: 'sufficient', Poor: 'poor' };
+  const PROFILE = 'https://environment.data.gov.uk/bwq/profiles/profile.html?site=';
+
+  // '<10' where the count is below the laboratory's limit.
+  const fmtCount = (v, q) => (v == null ? '—'
+    : `${q === '<' || q === '>' ? q : ''}${Number(v).toLocaleString('en-GB', { maximumFractionDigits: 0 })}`);
+
+  function bathingSummary(w) {
+    const cls = w.classification ? `${w.classification} (${w.class_year})` : 'not yet classified';
+    return w.risk === 'increased' ? `${cls} · pollution risk raised today` : cls;
+  }
+
+  // Recent samples, one column each, on a log scale: bacteria counts run
+  // from under 10 to tens of thousands per 100 ml.
+  function drawSamples(host, readout, key, rows) {
+    host.textContent = '';
+    readout.textContent = '';
+    if (!rows.length) {
+      host.textContent = 'No samples published yet.';
+      return;
+    }
+    const top = Math.pow(10, Math.max(3, Math.ceil(Math.log10(Math.max(...rows.flatMap(r => [r[1] || 1, r[3] || 1]))))));
+    const svg = el('svg', { viewBox: `0 0 ${W} ${H}`, class: 'stn-chart', role: 'img',
+      'aria-label': `E. coli and intestinal enterococci in the last ${rows.length} samples` });
+    host.appendChild(svg);
+    const step = (W - M.l - M.r) / rows.length;
+    const x = i => M.l + (i + 0.5) * step;
+    const y = v => M.t + (1 - Math.log10(Math.max(v, 1)) / Math.log10(top)) * (H - M.t - M.b);
+    for (let v = 1; v <= top; v *= 10) {
+      el('line', { x1: M.l, x2: W - M.r, y1: y(v), y2: y(v), class: 'stn-grid' }, svg);
+      el('text', { x: M.l - 5, y: y(v) + 3, 'text-anchor': 'end', class: 'stn-axis' }, svg).textContent = v.toLocaleString('en-GB');
+    }
+    // A season starts after a gap of more than four months: mark and label it.
+    rows.forEach((r, i) => {
+      if (i && r[0] - rows[i - 1][0] < 120 * 86400) return;
+      if (i) el('line', { x1: x(i) - step / 2, x2: x(i) - step / 2, y1: M.t, y2: H - M.b, class: 'stn-grid' }, svg);
+      el('text', { x: x(i) - step / 2 + 2, y: H - 6, class: 'stn-axis' }, svg).textContent =
+        new Date(r[0] * 1000).toLocaleDateString('en-GB', { timeZone: TZ, month: 'short', year: 'numeric' });
+    });
+    rows.forEach((r, i) => {
+      for (const [v, q, cls, dx] of [[r[1], r[2], 'bw-dot-ec', -2], [r[3], r[4], 'bw-dot-ie', 2]]) {
+        if (v == null) continue;
+        el('circle', { cx: x(i) + dx, cy: y(v), r: 2.6, class: `${cls}${q === '<' ? ' bw-dot-limit' : ''}` }, svg);
+      }
+    });
+    key.textContent = 'E. coli (teal) and intestinal enterococci (amber) per 100 ml, on a log scale. ' +
+      'Hollow dots were below the laboratory’s limit.';
+    const cursor = el('line', { y1: M.t, y2: H - M.b, class: 'stn-cursor', visibility: 'hidden' }, svg);
+    svg.addEventListener('mousemove', e => {
+      const box = svg.getBoundingClientRect();
+      const i = Math.floor(((e.clientX - box.left) * W / box.width - M.l) / step);
+      const r = rows[i];
+      if (!r) return;
+      cursor.setAttribute('x1', x(i));
+      cursor.setAttribute('x2', x(i));
+      cursor.setAttribute('visibility', 'visible');
+      readout.textContent = `${fmtDay(r[0])} · E. coli ${fmtCount(r[1], r[2])} · enterococci ${fmtCount(r[3], r[4])}`;
+    });
+    svg.addEventListener('mouseleave', () => { cursor.setAttribute('visibility', 'hidden'); readout.textContent = ''; });
+  }
+
+  function bathingContent(w) {
+    const box = node('div', 'stn-pop');
+    box.appendChild(node('div', 'stn-pop-title', w.name));
+    box.appendChild(node('div', 'stn-pop-sub', 'Bathing water'));
+    const cls = BW_CLASS[w.classification];
+    const state = node('div', `stn-pop-state is-${cls || 'unclassified'}`);
+    state.appendChild(node('span', 'stn-pop-dot'));
+    state.appendChild(document.createTextNode(cls ? `Classified ${w.classification} for ${w.class_year}` : 'Not yet classified'));
+    box.appendChild(state);
+
+    const risk = node('div', 'stn-pop-line');
+    if (w.risk === 'increased') risk.appendChild(node('span', 'stn-pop-note is-risk', 'Pollution risk forecast raised for today'));
+    else if (w.risk) risk.textContent = 'Pollution risk forecast normal for today';
+    else risk.textContent = 'Daily pollution risk forecasts run from May to September.';
+    box.appendChild(risk);
+    if (w.rain_affected) box.appendChild(node('div', 'stn-pop-line', 'Water quality here can drop after heavy rain.'));
+    if (w.sample) {
+      box.appendChild(node('div', 'stn-pop-line', `Last sampled ${fmtDay(w.sample.ts)}: E. coli ` +
+        `${fmtCount(w.sample.ec, w.sample.ec_q)}, enterococci ${fmtCount(w.sample.ie, w.sample.ie_q)} per 100 ml`));
+    }
+
+    box.appendChild(node('div', 'cso-head', 'Recent samples'));
+    const chartHost = node('div', 'stn-pop-chart loading');
+    const key = node('div', 'stn-pop-key');
+    const readout = node('div', 'stn-pop-readout');
+    box.append(chartHost, key, readout);
+    const source = node('div', 'stn-pop-source');
+    source.appendChild(document.createTextNode('Environment Agency · '));
+    if (w.eubwid) {
+      const a = node('a', 'stn-pop-link', 'profile and history');
+      a.href = PROFILE + encodeURIComponent(w.eubwid);
+      a.target = '_blank';
+      a.rel = 'noopener';
+      source.appendChild(a);
+    }
+    box.appendChild(source);
+
+    getJSON(`/api/bathing/${encodeURIComponent(w.id)}`).then(d => {
+      chartHost.classList.remove('loading');
+      drawSamples(chartHost, readout, key, d.samples || []);
+    }).catch(() => {
+      chartHost.classList.remove('loading');
+      chartHost.textContent = 'Samples are unavailable right now.';
+    });
+    return box;
+  }
+
+  function openBathing(map, w) {
+    L.popup({ className: 'stn-popup', maxWidth: 360, minWidth: 320, autoPanPadding: [24, 24] })
+      .setLatLng([w.lat, w.lon]).setContent(bathingContent(w)).openOn(map);
+  }
+
+  // Offshore stations -------------------------------------------------------------
+  const COMPASS = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
+  const compass = deg => COMPASS[Math.round(((deg % 360) + 360) % 360 / 22.5) % 16];
+  const mph = ms => ms * 2.23694;
+  const one = v => Number(v).toLocaleString('en-GB', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+
+  // The views a station's chart offers, for the fields it reports.
+  const MARINE_VIEWS = [
+    { field: 'wvht', label: 'Waves', caption: 'Significant wave height, in metres', fmt: v => `${one(v)} m`, zero: true },
+    { field: 'wspd', label: 'Wind', caption: 'Wind speed, hourly mean, in mph', conv: mph, fmt: v => `${Math.round(v)} mph`, zero: true },
+    { field: 'wtmp', label: 'Sea temp', caption: 'Sea temperature, in °C', fmt: v => `${one(v)} °C` },
+    { field: 'pres', label: 'Pressure', caption: 'Air pressure, in hPa', fmt: v => `${Math.round(v)} hPa` },
+  ];
+
+  function marineSummary(s) {
+    if (s.state === 'no-data') return 'no readings yet';
+    const parts = [];
+    if (s.wvht != null) parts.push(`waves ${one(s.wvht)} m`);
+    if (s.wspd != null) parts.push(`wind ${Math.round(mph(s.wspd))} mph${s.wdir != null ? ` ${compass(s.wdir)}` : ''}`);
+    if (s.wtmp != null) parts.push(`sea ${one(s.wtmp)} °C`);
+    const text = parts.join(' · ') || 'no readings';
+    return s.state === 'stale' ? `${text}, at ${fmtTime(s.ts)}` : text;
+  }
+
+  function marineRows(s) {
+    const rows = [];
+    if (s.wvht != null) {
+      const period = s.dpd ?? s.apd;
+      rows.push(['Waves', `${one(s.wvht)} m${period != null ? `, every ${Math.round(period)} s` : ''}`]);
+    }
+    if (s.wspd != null) {
+      rows.push(['Wind', `${Math.round(mph(s.wspd))} mph${s.wdir != null ? ` from the ${compass(s.wdir)}` : ''}` +
+        `${s.gst != null ? `, gusting ${Math.round(mph(s.gst))}` : ''}`]);
+    }
+    if (s.wtmp != null) rows.push(['Sea', `${one(s.wtmp)} °C`]);
+    if (s.atmp != null) rows.push(['Air', `${one(s.atmp)} °C`]);
+    if (s.pres != null) rows.push(['Pressure', `${Math.round(s.pres)} hPa`]);
+    return rows;
+  }
+
+  function drawSeries(host, readout, key, data, view) {
+    host.textContent = '';
+    readout.textContent = '';
+    const now = Math.floor(Date.now() / 1000);
+    const from = now - data.days * 86400;
+    const col = data.fields.indexOf(view.field) + 1;
+    const conv = view.conv || (v => v);
+    const points = data.readings.filter(r => r[col] != null && r[0] > from).map(r => [r[0], conv(r[col])]);
+    key.textContent = `${view.caption} · Met Office, via NOAA`;
+    if (!points.length) {
+      host.textContent = 'No readings in this period.';
+      return;
+    }
+    const vals = points.map(p => p[1]);
+    const lo = Math.min(...vals), hi = Math.max(...vals);
+    const pad = (hi - lo) * 0.1 || 1;
+    const axis = view.zero ? niceScale(0, Math.max(hi * 1.1, 1)) : niceScale(lo - pad, hi + pad);
+    const svg = el('svg', { viewBox: `0 0 ${W} ${H}`, class: 'stn-chart', role: 'img',
+      'aria-label': `${data.name}: ${view.caption.toLowerCase()} over the last ${data.days} days` });
+    host.appendChild(svg);
+    const x = t => M.l + (t - from) / (now - from) * (W - M.l - M.r);
+    const y = v => M.t + (1 - (v - axis.lo) / (axis.hi - axis.lo)) * (H - M.t - M.b);
+    for (const v of axis.ticks) {
+      el('line', { x1: M.l, x2: W - M.r, y1: y(v), y2: y(v), class: 'stn-grid' }, svg);
+      el('text', { x: M.l - 5, y: y(v) + 3, 'text-anchor': 'end', class: 'stn-axis' }, svg).textContent =
+        v.toLocaleString('en-GB', { maximumFractionDigits: 1 });
+    }
+    for (const t of timeTicks(from, now, data.days)) {
+      el('line', { x1: x(t), x2: x(t), y1: M.t, y2: H - M.b, class: 'stn-grid' }, svg);
+      el('text', { x: x(t), y: H - 6, 'text-anchor': 'middle', class: 'stn-axis' }, svg).textContent = tickLabel(t, data.days);
+    }
+    let d = '', prev = null;
+    for (const [t, v] of points) {
+      d += `${prev === null || t - prev > 3 * 3600 ? 'M' : 'L'}${x(t).toFixed(1)},${y(v).toFixed(1)}`;
+      prev = t;
+    }
+    el('path', { d, class: 'stn-line stn-line-sea' }, svg);
+    const cursor = el('line', { y1: M.t, y2: H - M.b, class: 'stn-cursor', visibility: 'hidden' }, svg);
+    svg.addEventListener('mousemove', e => {
+      const box = svg.getBoundingClientRect();
+      const t = from + ((e.clientX - box.left) * W / box.width - M.l) / (W - M.l - M.r) * (now - from);
+      let best = null;
+      for (const p of points) if (!best || Math.abs(p[0] - t) < Math.abs(best[0] - t)) best = p;
+      cursor.setAttribute('x1', x(best[0]));
+      cursor.setAttribute('x2', x(best[0]));
+      cursor.setAttribute('visibility', 'visible');
+      readout.textContent = `${fmtTime(best[0])} · ${view.fmt(best[1])}`;
+    });
+    svg.addEventListener('mouseleave', () => { cursor.setAttribute('visibility', 'hidden'); readout.textContent = ''; });
+  }
+
+  function marineContent(s) {
+    const box = node('div', 'stn-pop');
+    box.appendChild(node('div', 'stn-pop-title', s.name));
+    box.appendChild(node('div', 'stn-pop-sub', 'Offshore weather station'));
+    const state = node('div', `stn-pop-state is-${s.state === 'live' ? 'normal' : s.state}`);
+    state.appendChild(node('span', 'stn-pop-dot'));
+    state.appendChild(document.createTextNode(s.state === 'no-data' ? 'No readings yet'
+      : s.state === 'stale' ? `No report since ${fmtTime(s.ts)}` : `Reported ${fmtTime(s.ts, false)}`));
+    if (s.ts && s.state === 'live') state.appendChild(node('span', 'stn-pop-when', ` · ${fmtAgo(s.ts)}`));
+    box.appendChild(state);
+    const rows = marineRows(s);
+    if (rows.length) {
+      const dl = node('dl', 'marine-grid');
+      for (const [k, v] of rows) dl.append(node('dt', null, k), node('dd', null, v));
+      box.appendChild(dl);
+    }
+    const views = MARINE_VIEWS.filter(v => s[v.field] != null);
+    if (views.length) {
+      const tabs = node('div', 'stn-pop-ranges');
+      const chartHost = node('div', 'stn-pop-chart loading');
+      const key = node('div', 'stn-pop-key');
+      const readout = node('div', 'stn-pop-readout');
+      box.append(tabs, chartHost, key, readout);
+      const data = getJSON(`/api/marine/${encodeURIComponent(s.id)}?days=7`);
+      let current = views[0];
+      const render = () => data.then(d => {
+        chartHost.classList.remove('loading');
+        drawSeries(chartHost, readout, key, d, current);
+      }).catch(() => {
+        chartHost.classList.remove('loading');
+        chartHost.textContent = 'History is unavailable right now.';
+      });
+      for (const v of views) {
+        const b = node('button', 'btn-toggle' + (v === current ? ' active' : ''), v.label);
+        b.type = 'button';
+        b.addEventListener('click', () => {
+          current = v;
+          tabs.querySelectorAll('button').forEach(x => x.classList.toggle('active', x === b));
+          render();
+        });
+        tabs.appendChild(b);
+      }
+      render();
+    }
+    box.appendChild(node('div', 'stn-pop-source', `Met Office station ${s.id}, via NOAA’s National Data Buoy Center`));
+    return box;
+  }
+
+  function openMarine(map, s) {
+    L.popup({ className: 'stn-popup', maxWidth: 360, minWidth: 320, autoPanPadding: [24, 24] })
+      .setLatLng([s.lat, s.lon]).setContent(marineContent(s)).openOn(map);
+  }
+
   // Storm overflows ------------------------------------------------------------
   const OVERFLOW_STATE = {
     spilling: 'Spilling now', recent: 'Spilled in the last 48 hours',
@@ -595,7 +853,9 @@ const StationPopup = (() => {
 
   return {
     open, summary, invalidate, openOverflow, overflowSummary,
-    // The chart arithmetic, for tests/js.
-    _internals: { niceTicks, niceScale, levelAxis, timeTicks, tickLabel, rainBuckets, fmtValue, fmtFlow },
+    openBathing, bathingSummary, openMarine, marineSummary,
+    // The chart arithmetic and formatting, for tests/js.
+    _internals: { niceTicks, niceScale, levelAxis, timeTicks, tickLabel, rainBuckets, fmtValue, fmtFlow,
+      fmtCount, compass, marineRows },
   };
 })();

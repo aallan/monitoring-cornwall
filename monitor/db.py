@@ -76,6 +76,43 @@ CREATE TABLE IF NOT EXISTS flood_areas (
     updated     INTEGER NOT NULL
 );
 
+-- Environment Agency designated bathing waters, keyed by sampling point.
+CREATE TABLE IF NOT EXISTS bathing_waters (
+    id             TEXT PRIMARY KEY,     -- sampling point notation, e.g. 33300
+    eubwid         TEXT,                 -- bathing water notation, e.g. ukk3104-33300
+    name           TEXT NOT NULL,
+    lat            REAL NOT NULL,
+    lon            REAL NOT NULL,
+    classification TEXT,                 -- Excellent, Good, Sufficient or Poor
+    class_year     INTEGER,
+    risk           TEXT,                 -- the day's pollution risk forecast: normal or increased
+    risk_expires   INTEGER,              -- Unix seconds; forecasts run May to September
+    sample_ts      INTEGER,              -- the latest sample
+    ec             REAL,                 -- E. coli, cfu/100 ml
+    ec_q           TEXT,                 -- '<' or '>' where the count is a limit
+    ie             REAL,                 -- intestinal enterococci, cfu/100 ml
+    ie_q           TEXT,
+    rain_affected  INTEGER,              -- water quality can drop after heavy rain
+    active         INTEGER NOT NULL DEFAULT 1,
+    updated        INTEGER NOT NULL
+);
+
+-- Hourly observations from offshore stations; NULL where not reported.
+CREATE TABLE IF NOT EXISTS marine_obs (
+    station TEXT    NOT NULL,
+    ts      INTEGER NOT NULL,            -- Unix seconds, UTC
+    wdir    REAL,                        -- wind direction, degrees from
+    wspd    REAL,                        -- wind speed, m/s
+    gst     REAL,                        -- gust, m/s
+    wvht    REAL,                        -- significant wave height, m
+    dpd     REAL,                        -- dominant wave period, s
+    apd     REAL,                        -- average wave period, s
+    pres    REAL,                        -- air pressure, hPa
+    atmp    REAL,                        -- air temperature, °C
+    wtmp    REAL,                        -- sea temperature, °C
+    PRIMARY KEY (station, ts)
+) WITHOUT ROWID;
+
 CREATE TABLE IF NOT EXISTS meta (
     key   TEXT PRIMARY KEY,
     value TEXT

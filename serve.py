@@ -21,7 +21,7 @@ from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-from monitor import db, forecast, overflows, poll
+from monitor import bathing, db, forecast, marine, overflows, poll
 
 SITE = Path(__file__).resolve().parent / "site"
 DEFAULT_PORT = 8090
@@ -89,6 +89,30 @@ class Handler(SimpleHTTPRequestHandler):
             finally:
                 con.close()
             return self.send_json(found) if found else self.send_json({"error": "no such overflow"}, 404)
+        # /api/bathing/<sampling point>: a bathing water's recent samples
+        if len(parts) == 3 and parts[:2] == ["api", "bathing"] and re.fullmatch(r"\d{1,8}", parts[2]):
+            con = db.connect(read_only=True)
+            try:
+                known = con.execute("SELECT 1 FROM bathing_waters WHERE id = ? AND active = 1", (parts[2],)).fetchone()
+            finally:
+                con.close()
+            if not known:
+                return self.send_json({"error": "no such bathing water"}, 404)
+            try:
+                return self.send_json(bathing.samples(parts[2]))
+            except Exception:  # noqa: BLE001 - the popup says the samples are unavailable
+                return self.send_json({"error": "samples unavailable"}, 502)
+        # /api/marine/<station>?days=N: an offshore station's recent readings
+        if len(parts) == 3 and parts[:2] == ["api", "marine"] and parts[2] in marine.STATIONS:
+            try:
+                days = int(urllib.parse.parse_qs(url.query).get("days", ["7"])[0])
+            except ValueError:
+                days = 7
+            con = db.connect(read_only=True)
+            try:
+                return self.send_json(marine.history(con, parts[2], days))
+            finally:
+                con.close()
         # /api/forecast/rain/<station id>: the next 48 hours at a rain gauge
         if len(parts) == 4 and parts[:3] == ["api", "forecast", "rain"] and STATION_ID.match(parts[3]):
             con = db.connect(read_only=True)

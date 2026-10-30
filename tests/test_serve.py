@@ -9,7 +9,7 @@ from functools import partial
 from unittest import mock
 
 import serve
-from monitor import forecast
+from monitor import bathing, forecast
 from tests.support import NOW, DBTestCase
 
 
@@ -94,6 +94,29 @@ class Overflows(Server):
         status, d = self.get_json("/api/overflows/SBB00407")
         self.assertEqual((status, d["id"]), (200, "SBB00407"))
         self.assertEqual(self.request("/api/overflows/MISSING")[0], 404)
+
+
+class Bathing(Server):
+    def test_samples_only_for_known_bathing_waters(self):
+        self.con.execute("""INSERT INTO bathing_waters (id, name, lat, lon, updated)
+                            VALUES ('33300', 'Polzeath', 50.57, -4.92, 0)""")
+        self.con.commit()
+        self.assertEqual(self.request("/api/bathing/99999")[0], 404)
+        self.assertEqual(self.request("/api/bathing/ukk3104-33300")[0], 404)
+        with mock.patch.object(bathing, "samples", return_value={"samples": []}):
+            self.assertEqual(self.get_json("/api/bathing/33300"), (200, {"samples": []}))
+        with mock.patch.object(bathing, "samples", side_effect=OSError("down")):
+            self.assertEqual(self.request("/api/bathing/33300")[0], 502)
+
+
+class Marine(Server):
+    def test_marine_history(self):
+        self.con.execute("INSERT INTO marine_obs (station, ts, wvht) VALUES ('62107', ?, 1.9)", (int(time.time()) - 600,))
+        self.con.commit()
+        status, d = self.get_json("/api/marine/62107?days=2")
+        self.assertEqual((status, d["days"], len(d["readings"])), (200, 2, 1))
+        self.assertEqual(self.request("/api/marine/99999")[0], 404)
+        self.assertEqual(self.get_json("/api/marine/62107?days=x")[1]["days"], 7)
 
 
 class Forecasts(Server):

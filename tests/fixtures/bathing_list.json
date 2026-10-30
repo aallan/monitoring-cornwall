@@ -1,0 +1,152 @@
+{
+ "result": {
+  "items": [
+   {
+    "_about": "http://environment.data.gov.uk/id/bathing-water/ukk3101-26520",
+    "eubwidNotation": "ukk3101-26520",
+    "name": {
+     "_value": "Kingsand",
+     "_datatype": "langString",
+     "_lang": "en"
+    },
+    "samplingPoint": {
+     "_about": "http://location.data.gov.uk/so/ef/SamplingPoint/bwsp.eaew/26520",
+     "easting": 243570.0,
+     "lat": 50.33359139747659,
+     "long": -4.199395954504258,
+     "name": {
+      "_value": "Sampling point at Kingsand",
+      "_datatype": "langString",
+      "_lang": "en"
+     },
+     "northing": 50500.0,
+     "samplePointNotation": "26520"
+    },
+    "latestComplianceAssessment": {
+     "_about": "http://environment.data.gov.uk/data/bathing-water-quality/compliance-rBWD/point/26520/year/2025",
+     "complianceClassification": {
+      "_about": "http://environment.data.gov.uk/def/bwq-cc-2015/2",
+      "name": {
+       "_value": "Good",
+       "_datatype": "langString",
+       "_lang": "en"
+      }
+     }
+    },
+    "latestRiskPrediction": {
+     "_about": "http://environment.data.gov.uk/data/bathing-water-quality/stp-risk-prediction/point/26520/date/20261001-090651",
+     "expiresAt": {
+      "_value": "2026-10-02T08:29:00",
+      "_datatype": "dateTime"
+     },
+     "predictedOn": {
+      "_value": "2026-10-01",
+      "_datatype": "date"
+     },
+     "riskLevel": {
+      "_about": "http://environment.data.gov.uk/def/bwq-stp/normal",
+      "name": {
+       "_value": "normal",
+       "_datatype": "langString",
+       "_lang": "en"
+      }
+     }
+    },
+    "latestSampleAssessment": {
+     "_about": "http://environment.data.gov.uk/data/bathing-water-quality/in-season/sample/point/26520/date/20260921/time/113200/recordDate/20260921",
+     "escherichiaColiCount": 100,
+     "escherichiaColiQualifier": {
+      "_about": "http://environment.data.gov.uk/def/bathing-water-quality/actual",
+      "countQualifierNotation": "="
+     },
+     "intestinalEnterococciCount": 27,
+     "intestinalEnterococciQualifier": {
+      "_about": "http://environment.data.gov.uk/def/bathing-water-quality/actual",
+      "countQualifierNotation": "="
+     },
+     "sampleDateTime": {
+      "_about": "http://reference.data.gov.uk/id/gregorian-instant/2026-09-21T11:32:00",
+      "inXSDDateTime": {
+       "_value": "2026-09-21T11:32:00",
+       "_datatype": "dateTime"
+      }
+     }
+    },
+    "waterQualityImpactedByHeavyRain": false
+   },
+   {
+    "_about": "http://environment.data.gov.uk/id/bathing-water/ukk3104-33300",
+    "eubwidNotation": "ukk3104-33300",
+    "name": {
+     "_value": "Polzeath",
+     "_datatype": "langString",
+     "_lang": "en"
+    },
+    "samplingPoint": {
+     "_about": "http://location.data.gov.uk/so/ef/SamplingPoint/bwsp.eaew/33300",
+     "easting": 193600.0,
+     "lat": 50.574807678958884,
+     "long": -4.916442737581546,
+     "name": {
+      "_value": "Sampling point at Polzeath",
+      "_datatype": "langString",
+      "_lang": "en"
+     },
+     "northing": 79070.0,
+     "samplePointNotation": "33300"
+    },
+    "latestComplianceAssessment": {
+     "_about": "http://environment.data.gov.uk/data/bathing-water-quality/compliance-rBWD/point/33300/year/2025",
+     "complianceClassification": {
+      "_about": "http://environment.data.gov.uk/def/bwq-cc-2015/1",
+      "name": {
+       "_value": "Excellent",
+       "_datatype": "langString",
+       "_lang": "en"
+      }
+     }
+    },
+    "latestRiskPrediction": {
+     "_about": "http://environment.data.gov.uk/data/bathing-water-quality/stp-risk-prediction/point/33300/date/20261001-090651",
+     "expiresAt": {
+      "_value": "2026-10-02T08:29:00",
+      "_datatype": "dateTime"
+     },
+     "predictedOn": {
+      "_value": "2026-10-01",
+      "_datatype": "date"
+     },
+     "riskLevel": {
+      "_about": "http://environment.data.gov.uk/def/bwq-stp/normal",
+      "name": {
+       "_value": "normal",
+       "_datatype": "langString",
+       "_lang": "en"
+      }
+     }
+    },
+    "latestSampleAssessment": {
+     "_about": "http://environment.data.gov.uk/data/bathing-water-quality/in-season/sample/point/33300/date/20260923/time/085700/recordDate/20260923",
+     "escherichiaColiCount": 10,
+     "escherichiaColiQualifier": {
+      "_about": "http://environment.data.gov.uk/def/bathing-water-quality/lessThan",
+      "countQualifierNotation": "<"
+     },
+     "intestinalEnterococciCount": 54,
+     "intestinalEnterococciQualifier": {
+      "_about": "http://environment.data.gov.uk/def/bathing-water-quality/actual",
+      "countQualifierNotation": "="
+     },
+     "sampleDateTime": {
+      "_about": "http://reference.data.gov.uk/id/gregorian-instant/2026-09-23T08:57:00",
+      "inXSDDateTime": {
+       "_value": "2026-09-23T08:57:00",
+       "_datatype": "dateTime"
+      }
+     }
+    },
+    "waterQualityImpactedByHeavyRain": true
+   }
+  ]
+ }
+}

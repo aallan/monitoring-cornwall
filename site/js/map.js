@@ -54,6 +54,8 @@ const CornwallMap = (() => {
     csoRecent: { on: false },
     csoQuiet:  { on: false },
     floods:    { on: true },
+    bathing:   { on: true },
+    offshore:  { on: true },
   };
   // Legend sections whose heading switches the whole group.
   const GROUPS = {
@@ -63,6 +65,7 @@ const CornwallMap = (() => {
     waterways: ['rivers', 'streams'],
     railways: ['passenger', 'freight', 'stations'],
     roads: ['roads'],
+    coast: ['bathing', 'offshore'],
   };
   const parts = [];       // { layer, toggle, minZoom, z }
   const restylers = [];   // functions re-applying colours/weights
@@ -490,6 +493,63 @@ const CornwallMap = (() => {
       .catch(e => console.warn('No storm overflow data:', e));
   }
 
+  // ---------------------------------------------------------------- coast
+  // Bathing waters, coloured by their classification, with a badge on days
+  // the pollution risk forecast is raised; and offshore weather stations.
+  const coastGroups = { bathing: L.layerGroup(), offshore: L.layerGroup() };
+  let coastRegistered = false;
+  const BW_CLASS = { Excellent: 'excellent', Good: 'good', Sufficient: 'sufficient', Poor: 'poor' };
+
+  function registerCoast() {
+    if (coastRegistered) return;
+    addPart(coastGroups.bathing, 'bathing', Z.markers);
+    addPart(coastGroups.offshore, 'offshore', Z.markers);
+    coastRegistered = true;
+  }
+
+  function renderBathing(data) {
+    registerCoast();
+    coastGroups.bathing.clearLayers();
+    for (const w of data.bathing_waters) {
+      const cls = BW_CLASS[w.classification] || 'unclassified';
+      const icon = L.divIcon({
+        className: '', iconSize: [12, 12], iconAnchor: [6, 6],
+        html: `<span class="bw is-${cls}"></span>` +
+          (w.risk === 'increased' ? '<span class="trend for-bw is-risk"></span>' : ''),
+      });
+      L.marker([w.lat, w.lon], { icon, title: w.name, riseOnHover: true, zIndexOffset: w.risk === 'increased' ? 300 : 0 })
+        .bindTooltip(tip(w.name, StationPopup.bathingSummary(w)), { ...TIP_OPTS, sticky: false, offset: [0, -8] })
+        .on('click', () => StationPopup.openBathing(map, w))
+        .addTo(coastGroups.bathing);
+    }
+    setCount('bathing', data.bathing_waters.length);
+  }
+
+  function renderOffshore(data) {
+    registerCoast();
+    coastGroups.offshore.clearLayers();
+    for (const s of data.stations) {
+      const icon = L.divIcon({
+        className: '', iconSize: [14, 14], iconAnchor: [7, 7],
+        html: `<span class="buoy is-${esc(s.state)}"></span>`,
+      });
+      L.marker([s.lat, s.lon], { icon, title: s.name, riseOnHover: true })
+        .bindTooltip(tip(s.name, StationPopup.marineSummary(s)), { ...TIP_OPTS, sticky: false, offset: [0, -10] })
+        .on('click', () => StationPopup.openMarine(map, s))
+        .addTo(coastGroups.offshore);
+    }
+    setCount('offshore', data.stations.length);
+  }
+
+  function loadCoast() {
+    getJSON(DATA + 'bathing.json')
+      .then(d => { renderBathing(d); updateVisibility(); })
+      .catch(e => console.warn('No bathing water data:', e));
+    getJSON(DATA + 'marine.json')
+      .then(d => { renderOffshore(d); updateVisibility(); })
+      .catch(e => console.warn('No offshore station data:', e));
+  }
+
   function loadLive() {
     return getJSON(DATA + 'live.json')
       .then(live => { renderLive(live); updateVisibility(); })
@@ -605,6 +665,12 @@ const CornwallMap = (() => {
         ${title('waterways', 'Waterways')}
         ${item('rivers', 'line', '--water', 'Rivers', '<span class="count" id="legend-count-rivers"></span>')}
         ${item('streams', 'line thin', '--water-minor', 'Streams', '<span class="count" id="legend-streams-hint"></span>')}
+        ${title('coast', 'Coast')}
+        ${item('bathing', 'bw-swatch', '--bw-excellent', 'Bathing waters', '<span class="count" id="legend-count-bathing"></span>')}
+        <div class="legend-key"><span class="bw-key is-excellent"></span>excellent<span class="bw-key is-good"></span>good</div>
+        <div class="legend-key"><span class="bw-key is-sufficient"></span>sufficient<span class="bw-key is-poor"></span>poor</div>
+        <div class="legend-key"><span class="bw-key is-risk"></span>pollution risk raised today</div>
+        ${item('offshore', 'buoy-swatch', '--sea', 'Offshore stations', '<span class="count" id="legend-count-offshore"></span>')}
         ${title('railways', 'Railways')}
         ${item('passenger', 'line', '--rail', 'Passenger lines')}
         ${item('freight', 'dash', '--rail-freight', 'Freight branches')}
@@ -672,6 +738,7 @@ const CornwallMap = (() => {
     map.attributionControl.addAttribution('Readings: <a href="https://environment.data.gov.uk/flood-monitoring/doc/reference">Environment Agency</a>');
     map.attributionControl.addAttribution('Overflows: <a href="https://www.arcgis.com/home/item.html?id=cabfce76b72a4a278a33d737c0708d42">South West Water</a>');
     map.attributionControl.addAttribution('Forecasts: <a href="https://open-meteo.com/">Open-Meteo</a>, <a href="https://nrfa.ceh.ac.uk/">NRFA</a>');
+    map.attributionControl.addAttribution('Sea: <a href="https://www.metoffice.gov.uk/">Met Office</a> via <a href="https://www.ndbc.noaa.gov/">NOAA</a>');
     map.setView([50.45, -4.95], 9, { animate: false });  // placeholder until the container has a size
     makePanes();
     setTiles();
@@ -689,7 +756,8 @@ const CornwallMap = (() => {
     // rest. Live readings are a single small file, so markers appear first.
     loadLive();
     loadOverflows();
-    setInterval(() => { loadLive(); loadOverflows(); }, LIVE_REFRESH_MS);
+    loadCoast();
+    setInterval(() => { loadLive(); loadOverflows(); loadCoast(); }, LIVE_REFRESH_MS);
     const layer = (name, add) => getJSON(DATA + name)
       .then(fc => { add(fc); updateVisibility(); })
       .catch(e => console.warn(e));

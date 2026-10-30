@@ -85,3 +85,29 @@ test('tooltip summaries', () => {
   assert.equal(overflowSummary({ state: 'quiet' }), 'no spills recorded');
   assert.equal(overflowSummary({ state: 'spilling' }), 'spilling now');
 });
+
+test('bathing water counts and summaries', () => {
+  const { fmtCount } = StationPopup._internals;
+  assert.equal(fmtCount(10, '<'), '<10');
+  assert.equal(fmtCount(54, '='), '54');
+  assert.equal(fmtCount(12000, null), '12,000');
+  assert.equal(fmtCount(null, '<'), '—');
+  const { bathingSummary } = StationPopup;
+  assert.equal(bathingSummary({ classification: 'Excellent', class_year: 2025, risk: 'normal' }), 'Excellent (2025)');
+  assert.equal(bathingSummary({ classification: 'Good', class_year: 2025, risk: 'increased' }),
+    'Good (2025) · pollution risk raised today');
+  assert.equal(bathingSummary({}), 'not yet classified');
+});
+
+test('offshore readings', () => {
+  const { compass, marineRows } = StationPopup._internals;
+  assert.deepEqual(plain([0, 11, 12, 180, 350, 359, -10, 720].map(compass)),
+    ['N', 'N', 'NNE', 'S', 'N', 'N', 'N', 'N']);
+  assert.equal(compass(225), 'SW');
+  const rows = plain(marineRows({ wvht: 1.9, apd: 10, wspd: 7.7, wdir: 120, wtmp: 14, pres: 1025.8 }));
+  assert.deepEqual(rows, [['Waves', '1.9 m, every 10 s'], ['Wind', '17 mph from the ESE'],
+    ['Sea', '14.0 °C'], ['Pressure', '1026 hPa']]);
+  const { marineSummary } = StationPopup;
+  assert.equal(marineSummary({ state: 'live', wvht: 1.9, wtmp: 14 }), 'waves 1.9 m · sea 14.0 °C');
+  assert.equal(marineSummary({ state: 'no-data' }), 'no readings yet');
+});

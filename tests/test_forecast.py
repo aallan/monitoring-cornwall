@@ -1,41 +1,17 @@
-"""Forecasts: caching, the rain window, and scaling modelled river flow."""
+"""Forecasts: the rain window, and scaling modelled river flow."""
 
 import unittest
-import urllib.error
 from unittest import mock
 
-from monitor import forecast
+from monitor import cache, forecast
 from tests.support import NOW, QuietTestCase
-
-
-class Cache(QuietTestCase):
-    def setUp(self):
-        super().setUp()
-        forecast._cache.clear()
-        self.addCleanup(forecast._cache.clear)
-
-    def test_a_fresh_answer_is_reused(self):
-        fetch = mock.Mock(return_value=1)
-        self.assertEqual(forecast._cached("k", 60, fetch), 1)
-        self.assertEqual(forecast._cached("k", 60, fetch), 1)
-        self.assertEqual(fetch.call_count, 1)
-
-    def test_the_last_good_answer_survives_a_failure(self):
-        forecast._cached("k", 0, lambda: "good")
-        failing = mock.Mock(side_effect=urllib.error.URLError("down"))
-        self.assertEqual(forecast._cached("k", 0, failing), "good")
-        failing.assert_called_once()
-
-    def test_a_failure_with_nothing_cached_raises(self):
-        with self.assertRaises(urllib.error.URLError):
-            forecast._cached("k", 60, mock.Mock(side_effect=urllib.error.URLError("down")))
 
 
 class Rain(QuietTestCase):
     def setUp(self):
         super().setUp()
-        forecast._cache.clear()
-        self.addCleanup(forecast._cache.clear)
+        cache.clear()
+        self.addCleanup(cache.clear)
 
     def test_outside_the_region(self):
         with self.assertRaises(ValueError):
@@ -59,8 +35,8 @@ class Rain(QuietTestCase):
 class Flow(QuietTestCase):
     def setUp(self):
         super().setUp()
-        forecast._cache.clear()
-        self.addCleanup(forecast._cache.clear)
+        cache.clear()
+        self.addCleanup(cache.clear)
 
     def test_scales_the_model_to_the_gauged_mean(self):
         outlet = forecast.FLOW_OUTLETS["47117"]

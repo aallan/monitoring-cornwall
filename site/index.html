@@ -7,7 +7,7 @@
   <meta name="description" content="Rivers, streams, railways and major roads of Cornwall on one map.">
   <link rel="icon" type="image/svg+xml" href="img/favicon.svg?v=1">
   <link rel="stylesheet" href="lib/leaflet/leaflet.css?v=1.9.4">
-  <link rel="stylesheet" href="css/style.css?v=30">
+  <link rel="stylesheet" href="css/style.css?v=31">
   <script src="js/utils.js?v=2"></script>
 </head>
 <body>
@@ -42,7 +42,8 @@
       <h2>About</h2>
       <div class="panel">
         <p>A map of Cornwall's rivers, streams, railways and major roads, drawn from OpenStreetMap, with the
-          Environment Agency's flood warnings and alerts, live readings from its river level, tidal and rain gauges, and South West Water's storm overflow monitors. Rain gauges have a 48-hour rain forecast, and the
+          Environment Agency's flood warnings and alerts, live readings from its river level, tidal and rain gauges, and South West Water's storm overflow monitors. Around the coast are the
+          county's 90 designated bathing waters and two offshore weather stations. Rain gauges have a 48-hour rain forecast, and the
           gauges on the Tamar, Lynher, Fowey and Camel a fortnight's river flow forecast. Each river ends where it
           meets the dimmed water outside the county, rather than running down the middle of the estuary to the sea. The railways are the passenger and freight
           network; heritage lines aren't shown. The roads are the A30, A38 and A39.</p>
@@ -63,6 +64,8 @@
             <tr><td>Rain forecast</td><td><a href="https://open-meteo.com/" rel="noopener">Open-Meteo</a> weather forecast API, hourly rainfall for the next 48 hours at each rain gauge, fetched when a forecast is opened and kept for 15 minutes</td><td><a href="https://creativecommons.org/licenses/by/4.0/" rel="noopener">CC BY 4.0</a></td></tr>
             <tr><td>River flow forecast</td><td>GloFAS river discharge from the Copernicus Emergency Management Service, through <a href="https://open-meteo.com/en/docs/flood-api" rel="noopener">Open-Meteo's flood API</a>, for the Tamar, Lynher, Fowey and Camel. GloFAS models rivers on a grid about 5 km across, so its flows are scaled to match each river's long-run mean flow, and its forecasts are a guide to the days ahead rather than a measurement.</td><td><a href="https://creativecommons.org/licenses/by/4.0/" rel="noopener">CC BY 4.0</a></td></tr>
             <tr><td>Mean river flows</td><td>Data from the UK National River Flow Archive, used to scale the modelled flows</td><td><a href="https://nrfa.ceh.ac.uk/help/costs-terms-and-conditions" rel="noopener">NRFA terms</a></td></tr>
+            <tr><td>Bathing waters</td><td>Environment Agency bathing water quality data: classifications, in-season samples and daily pollution risk forecasts, checked every hour</td><td><a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/" rel="noopener">Open Government Licence</a></td></tr>
+            <tr><td>Offshore stations</td><td>Met Office observations from the Seven Stones lightvessel and the E1 buoy, as republished by <a href="https://www.ndbc.noaa.gov/" rel="noopener">NOAA's National Data Buoy Center</a>, checked every 30 minutes</td><td><a href="https://www.weather.gov/disclaimer" rel="noopener">NOAA terms</a></td></tr>
             <tr><td>Storm overflows</td><td>South West Water's storm overflow activity feed, checked every 5 minutes</td><td><a href="https://creativecommons.org/licenses/by/4.0/" rel="noopener">CC BY 4.0</a></td></tr>
             <tr><td>Storm overflow annual totals</td><td>Event Duration Monitoring annual returns. © Environment Agency copyright and/or database right.</td><td><a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/" rel="noopener">Open Government Licence</a></td></tr>
             <tr><td>Boundary</td><td>OpenStreetMap relations 57537 (Cornwall) and 158039 (Isles of Scilly)</td><td><a href="https://www.openstreetmap.org/copyright" rel="noopener">ODbL</a></td></tr>
@@ -90,8 +93,8 @@
 </footer>
 
 <script src="lib/leaflet/leaflet.js?v=1.9.4"></script>
-<script src="js/stations.js?v=8"></script>
-<script src="js/map.js?v=30"></script>
+<script src="js/stations.js?v=9"></script>
+<script src="js/map.js?v=31"></script>
 <script src="js/floods.js?v=2"></script>
 <script src="js/app.js?v=7"></script>
 </body>

@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from monitor import db, ea, floods, forecast, overflows
+from monitor import cache, db, ea, floods, overflows
 
 NOW = 1_793_361_600  # Fri 30 Oct 2026 12:00 UTC
 
@@ -14,7 +14,7 @@ class QuietTestCase(unittest.TestCase):
     """Silences the monitor's log lines, which tests of failures provoke."""
 
     def setUp(self):
-        for module in (ea, floods, forecast, overflows):
+        for module in (cache, ea, floods, overflows):
             patcher = mock.patch.object(module, "log")
             patcher.start()
             self.addCleanup(patcher.stop)
@@ -32,8 +32,8 @@ class DBTestCase(QuietTestCase):
         self.addCleanup(self._dir.cleanup)
         self.con = db.connect()
         self.addCleanup(self.con.close)
-        forecast._cache.clear()
-        self.addCleanup(forecast._cache.clear)
+        cache.clear()
+        self.addCleanup(cache.clear)
 
     def add_station(self, sid, kind="level", measure=None, name="Somewhere", lat=50.4, lon=-4.9,
                     unit="m", typical=(0.2, 1.0), record=2.0, river="River Test"):

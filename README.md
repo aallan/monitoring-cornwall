@@ -35,6 +35,10 @@ Overflows at sewage treatment works, the inlet overflows and storm tanks, are dr
 
 An overflow's popup shows its spills over the last 30 days as a timeline, and its spill hours and spill count for each year from the regulatory [annual returns](https://www.arcgis.com/home/item.html?id=66fef44a4aab438991d7ce08fbc1de64).
 
+Around the coast, the map shows the Environment Agency's 90 designated bathing waters in Cornwall; the Isles of Scilly have none. Each is a square coloured by its latest annual classification, which rests on four years of samples: Excellent, Good, Sufficient or Poor. During the bathing season, May to September, the Agency forecasts each morning whether the day's pollution risk is raised, usually after heavy rain, and a square carries an amber badge when it is. A bathing water's popup shows its latest sample and a chart of its last 25, on a log scale, and links to the Agency's profile of it.
+
+Two offshore stations report the weather at sea each hour: the Met Office's Seven Stones lightvessel, between Land's End and the Isles of Scilly, which measures waves, and its E1 buoy, about 35 km south of Looe, which measures wind. Both report sea and air temperature and pressure. Their popups chart the last week of whatever each one measures.
+
 All of these markers grow as the map zooms in.
 
 The rest of the map comes from OpenStreetMap.
@@ -76,7 +80,7 @@ python3 scripts/fetch_geodata.py --cached    # rebuild from the cache, however o
 
 Monitoring Cornwall runs as one self-contained process on a single server, and its data lives there with it. Nothing generated is committed to this repository: Leaflet and the map overlays are built on the machine that serves the site, by `make libs` and `make data`, and readings collect in `data/monitor.db`.
 
-`serve.py` is a small threaded HTTP server. It serves `site/`, answers `/api/stations/<id>/readings?days=N` from the database and `/api/forecast/rain/<id>` and `/api/forecast/flow/<id>` from Open-Meteo, and polls the Environment Agency in a background thread; `--no-poll` turns the poller off where something else runs `python3 -m monitor.poll`. It binds to `localhost` on port 8090 by default; `--bind` and a port argument change both.
+`serve.py` is a small threaded HTTP server. It serves `site/`, answers `/api/stations/<id>/readings?days=N`, `/api/overflows/<id>` and `/api/marine/<id>?days=N` from the database, `/api/forecast/rain/<id>` and `/api/forecast/flow/<id>` from Open-Meteo, and `/api/bathing/<id>` from the Environment Agency, and polls the Environment Agency in a background thread; `--no-poll` turns the poller off where something else runs `python3 -m monitor.poll`. It binds to `localhost` on port 8090 by default; `--bind` and a port argument change both.
 
 ```bash
 python3 serve.py 8090 --bind ::
@@ -101,6 +105,12 @@ Once a day the poller lists the Environment Agency's flood areas within 110 km o
 The overflow feed reports each overflow's current state and only its most recent spill, so the spill history is built up by polling. Every 5 minutes the poller reads all of South West Water's overflows in one request, about 380 KB, and for each of Cornwall's compares the latest spill with the last one stored. A new start time is a new spill, and the same start time with the overflow now quiet closes the open one. A spill that starts and ends entirely between two polls is still caught, because the feed keeps it as the latest event until the next one, but if two spills happen between polls the earlier is missed. The log starts when the server first runs, so the 30-day panel fills in over its first month. After each poll the server writes `site/data/overflows.json`, about 60 KB, for the markers; an overflow's log and yearly totals come from `/api/overflows/<id>` when its popup opens.
 
 An overflow counts as Cornish if it's inside the county boundary. Outfalls often sit offshore, beyond the low-water line, so one outside the boundary still counts if it's within 3 km of it and nearer to Cornwall than to Devon or Plymouth. That takes in the outfalls in Cawsand Bay and on the Cornish side of the Tamar, and leaves out Plymouth's. Once a day the poller refreshes the list, and reads names, asset types and yearly totals from the annual returns, matching rows to overflows by permit ID.
+
+## How the coast is collected
+
+Every hour the poller reads all of Cornwall's bathing waters from the Environment Agency's bathing water quality API in one request, with each one's sampling point, latest classification, pollution risk forecast and sample, and writes `site/data/bathing.json`. A forecast is shown until it expires, so outside the season none is. A bathing water's last 25 samples come from `/api/bathing/<id>`, which the server fetches from the Agency when a popup asks and keeps for six hours.
+
+Every 30 minutes it reads the offshore stations' observation files from NOAA's National Data Buoy Center, which republishes the Met Office's hourly reports, and stores each hour's readings. `site/data/marine.json` holds each station's latest value of everything it measures, and `/api/marine/<id>` returns up to 28 days for the popup charts.
 
 ## How forecasts are fetched
 
@@ -128,7 +138,7 @@ Railway ways are classified by line name, then by `usage` tag. Heritage and tour
 
 ## Tests
 
-`make test` runs both test suites, which use only Python's `unittest` and Node's built-in test runner, so there's nothing to install beyond Python 3.10 or later and Node 22 or later. The Python tests cover the poller, the spill log, flood warnings, forecasts, geometry and the server's endpoints and headers; each runs against a temporary database, with the Environment Agency, South West Water, Open-Meteo and NRFA replaced by fixed responses, so they need no network. The JavaScript tests load the page's scripts into a sandbox and check the chart arithmetic, the escaping and the tooltip text. GitHub Actions runs `make test` on every push to `main` and every pull request, on Python 3.10 and 3.13.
+`make test` runs both test suites, which use only Python's `unittest` and Node's built-in test runner, so there's nothing to install beyond Python 3.10 or later and Node 22 or later. The Python tests cover the poller, the spill log, flood warnings, forecasts, bathing waters, offshore stations, geometry and the server's endpoints and headers; each runs against a temporary database, with the Environment Agency, South West Water, Open-Meteo, NRFA and NOAA replaced by fixed responses, several of them trimmed copies of real ones in `tests/fixtures/`, so they need no network. The JavaScript tests load the page's scripts into a sandbox and check the chart arithmetic, the escaping and the tooltip text. GitHub Actions runs `make test` on every push to `main` and every pull request, on Python 3.10 and 3.13.
 
 ## Project layout
 
@@ -140,6 +150,9 @@ monitor/live.py           writes site/data/live.json
 monitor/overflows.py      South West Water storm overflows: list, spill log, annual totals
 monitor/floods.py         Environment Agency flood warnings and alerts, and their areas
 monitor/forecast.py       rain and river flow forecasts from Open-Meteo, and the flow outlets
+monitor/bathing.py        Environment Agency bathing waters: classifications, forecasts, samples
+monitor/marine.py         offshore stations, from the NDBC's copies of Met Office reports
+monitor/cache.py          fetching popup data on demand, with an in-memory cache
 monitor/db.py             SQLite schema and connection
 monitor/geo.py            boundary geometry shared with the overlay builder
 scripts/fetch_geodata.py  OpenStreetMap to site/data/*.geojson, data/places.json and data/neighbours.geojson
@@ -164,4 +177,4 @@ Bug reports, corrections and pull requests are welcome; [CONTRIBUTING.md](CONTRI
 
 The code is released under the [MIT licence](LICENSE).
 
-The map data is © OpenStreetMap contributors, available under the [Open Database Licence](https://www.openstreetmap.org/copyright). This uses Environment Agency flood and river level data from the real-time data API (Beta), available under the [Open Government Licence](https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/). Storm overflow activity is © South West Water, under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), and the overflow annual returns are © Environment Agency copyright and/or database right, under the Open Government Licence. Weather and river flow forecasts are from [Open-Meteo](https://open-meteo.com/), under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), with river flows generated using Copernicus Emergency Management Service information. Mean river flows are data from the UK National River Flow Archive. Basemap tiles are © [Esri](https://www.esri.com/). [Leaflet](https://leafletjs.com/) is released under the BSD 2-Clause licence.
+The map data is © OpenStreetMap contributors, available under the [Open Database Licence](https://www.openstreetmap.org/copyright). This uses Environment Agency flood and river level data from the real-time data API (Beta), available under the [Open Government Licence](https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/). Storm overflow activity is © South West Water, under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), and the overflow annual returns are © Environment Agency copyright and/or database right, under the Open Government Licence. Weather and river flow forecasts are from [Open-Meteo](https://open-meteo.com/), under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), with river flows generated using Copernicus Emergency Management Service information. Mean river flows are data from the UK National River Flow Archive. Bathing water data are © Environment Agency, under the Open Government Licence. Offshore observations are the Met Office's, as republished by NOAA's National Data Buoy Center. Basemap tiles are © [Esri](https://www.esri.com/). [Leaflet](https://leafletjs.com/) is released under the BSD 2-Clause licence.

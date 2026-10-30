@@ -7,51 +7,21 @@ so visitors' browsers never contact either, and each answer is cached so
 repeated popups don't repeat the request.
 """
 
-import json
-import threading
 import time
-import urllib.error
-import urllib.parse
-import urllib.request
 
-from .ea import USER_AGENT, log
+from .cache import cached, get_json
 from .geo import in_region
 
 FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
 FLOOD_URL = "https://flood-api.open-meteo.com/v1/flood"
 
-RAIN_HOURS = 48
 RAIN_TTL = 15 * 60        # the weather models update hourly at most
 FLOW_TTL = 60 * 60        # the flood model updates daily
-
-_cache = {}
-_lock = threading.Lock()
+RAIN_HOURS = 48
 
 
 def _get(url, params):
-    req = urllib.request.Request(f"{url}?{urllib.parse.urlencode(params)}", headers={"User-Agent": USER_AGENT})
-    with urllib.request.urlopen(req, timeout=20) as r:
-        return json.loads(r.read())
-
-
-def _cached(key, ttl, fetch):
-    """Return a cached value, or fetch and cache it. A failed fetch serves
-    the last good value if there is one."""
-    now = time.time()
-    with _lock:
-        hit = _cache.get(key)
-        if hit and now - hit[0] < ttl:
-            return hit[1]
-    try:
-        value = fetch()
-    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, KeyError, ValueError) as e:
-        log(f"forecast request failed for {key}: {e}")
-        if hit:
-            return hit[1]
-        raise
-    with _lock:
-        _cache[key] = (now, value)
-    return value
+    return get_json(url, params)
 
 
 def rain(lat, lon):
@@ -70,7 +40,7 @@ def rain(lat, lon):
                 if now <= t < now + RAIN_HOURS * 3600 and mm is not None]
         return {"hours": rows, "source": "Open-Meteo"}
 
-    return _cached(("rain", round(lat, 3), round(lon, 3)), RAIN_TTL, fetch)
+    return cached(("rain", round(lat, 3), round(lon, 3)), RAIN_TTL, fetch)
 
 
 # River flow forecasts come from GloFAS, the Copernicus global flood model,
@@ -115,7 +85,7 @@ def gauged_mean(nrfa_id):
             raise ValueError(f"no mean flow for NRFA station {nrfa_id}")
         return mean
 
-    return _cached(("nrfa", nrfa_id), NRFA_TTL, fetch)
+    return cached(("nrfa", nrfa_id), NRFA_TTL, fetch)
 
 
 def flow(station_id):
@@ -146,4 +116,4 @@ def flow(station_id):
             "normal": round(normal, 2), "high": round(o["model_q10"] * scale, 2),
         }
 
-    return _cached(("flow", station_id), FLOW_TTL, fetch)
+    return cached(("flow", station_id), FLOW_TTL, fetch)

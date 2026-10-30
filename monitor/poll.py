@@ -11,7 +11,7 @@ import argparse
 import threading
 import time
 
-from . import db, ea, floods, live, overflows
+from . import bathing, db, ea, floods, live, marine, overflows
 
 # Stations report every 15 minutes but not in step, and the EA publishes each
 # reading some minutes after it is taken, so polling more often than the
@@ -36,6 +36,14 @@ def cycle():
             poll_floods(con)
         except Exception as e:  # noqa: BLE001
             ea.log(f"flood warning poll failed: {e}")
+        try:
+            poll_bathing(con)
+        except Exception as e:  # noqa: BLE001
+            ea.log(f"bathing water poll failed: {e}")
+        try:
+            poll_marine(con)
+        except Exception as e:  # noqa: BLE001
+            ea.log(f"offshore station poll failed: {e}")
     finally:
         con.close()
 
@@ -83,6 +91,26 @@ def poll_overflows(con):
     n = overflows.poll_overflows(con)
     overflows.write_summary(con)
     ea.log(f"overflows: {n} statuses")
+
+
+def poll_bathing(con):
+    """Bathing waters change at most daily, so they're read once an hour."""
+    if time.time() - int(db.get_meta(con, "bathing_refreshed", 0)) > bathing.REFRESH:
+        n = bathing.refresh(con)
+        db.set_meta(con, "bathing_refreshed", int(time.time()))
+        con.commit()
+        ea.log(f"bathing waters: {n}")
+    bathing.write_summary(con)
+
+
+def poll_marine(con):
+    """Offshore stations report hourly, so they're read every half hour."""
+    if time.time() - int(db.get_meta(con, "marine_refreshed", 0)) > marine.REFRESH:
+        n, errors = marine.poll(con)
+        db.set_meta(con, "marine_refreshed", int(time.time()))
+        con.commit()
+        ea.log(f"offshore stations: {n} readings" + (f"; failed {', '.join(errors)}" if errors else ""))
+    marine.write_summary(con)
 
 
 def run_forever(stop=None):
