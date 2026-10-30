@@ -33,7 +33,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from monitor.geo import LandMask, perp_dist  # noqa: E402
+from monitor.geo import LandMask, simplify  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "site" / "data"
@@ -152,27 +152,6 @@ def pause():
 
 def coords_of(way):
     return [(p["lon"], p["lat"]) for p in way.get("geometry", []) if p]
-
-
-def simplify(pts, tol):
-    """Iterative Douglas-Peucker; keeps endpoints so lines still join."""
-    if len(pts) < 3 or tol <= 0:
-        return pts
-    keep = [False] * len(pts)
-    keep[0] = keep[-1] = True
-    stack = [(0, len(pts) - 1)]
-    while stack:
-        i, j = stack.pop()
-        best, idx = 0.0, None
-        for k in range(i + 1, j):
-            d = perp_dist(pts[k], pts[i], pts[j])
-            if d > best:
-                best, idx = d, k
-        if idx is not None and best > tol:
-            keep[idx] = True
-            stack.append((i, idx))
-            stack.append((idx, j))
-    return [p for p, k in zip(pts, keep) if k]
 
 
 def rnd(pts):

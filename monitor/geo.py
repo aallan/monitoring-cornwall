@@ -127,3 +127,24 @@ class LandMask:
         if len(cur) >= 2:
             runs.append(cur)
         return runs
+
+
+def simplify(pts, tol):
+    """Iterative Douglas-Peucker; keeps endpoints so lines still join."""
+    if len(pts) < 3 or tol <= 0:
+        return pts
+    keep = [False] * len(pts)
+    keep[0] = keep[-1] = True
+    stack = [(0, len(pts) - 1)]
+    while stack:
+        i, j = stack.pop()
+        best, idx = 0.0, None
+        for k in range(i + 1, j):
+            d = perp_dist(pts[k], pts[i], pts[j])
+            if d > best:
+                best, idx = d, k
+        if idx is not None and best > tol:
+            keep[idx] = True
+            stack.append((i, idx))
+            stack.append((idx, j))
+    return [p for p, k in zip(pts, keep) if k]

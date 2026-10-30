@@ -11,7 +11,7 @@ import argparse
 import threading
 import time
 
-from . import db, ea, live, overflows
+from . import db, ea, floods, live, overflows
 
 # Stations report every 15 minutes but not in step, and the EA publishes each
 # reading some minutes after it is taken, so polling more often than the
@@ -32,6 +32,10 @@ def cycle():
             poll_overflows(con)
         except Exception as e:  # noqa: BLE001
             ea.log(f"overflow poll failed: {e}")
+        try:
+            poll_floods(con)
+        except Exception as e:  # noqa: BLE001
+            ea.log(f"flood warning poll failed: {e}")
     finally:
         con.close()
 
@@ -53,6 +57,18 @@ def poll_gauges(con):
     if filled:
         live.write(con)
     ea.log(f"gauges: {len(latest)} latest readings, {filled} series filled in")
+
+
+def poll_floods(con):
+    refreshed = int(db.get_meta(con, "flood_areas_refreshed", 0))
+    if time.time() - refreshed > STATION_REFRESH:
+        n = floods.refresh_areas(con)
+        db.set_meta(con, "flood_areas_refreshed", int(time.time()))
+        con.commit()
+        ea.log(f"flood area list refreshed: {n} areas")
+    warnings = floods.poll_warnings(con)
+    floods.write_summary(warnings)
+    ea.log(f"flood warnings: {len(warnings)} in force")
 
 
 def poll_overflows(con):

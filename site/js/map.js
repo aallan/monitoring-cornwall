@@ -27,6 +27,7 @@ const CornwallMap = (() => {
 
   let map;
   let tileTheme = null;
+  let legendReady = false;
   let baseTiles = null;
   let refTiles = null;
 
@@ -45,9 +46,11 @@ const CornwallMap = (() => {
     csoNow:    { on: true },
     csoRecent: { on: true },
     csoQuiet:  { on: true },
+    floods:    { on: true },
   };
   // Legend sections whose heading switches the whole group.
   const GROUPS = {
+    floods: ['floods'],
     live: ['levels', 'tidal', 'rain'],
     overflows: ['csoNow', 'csoRecent', 'csoQuiet'],
     waterways: ['rivers', 'streams'],
@@ -60,7 +63,7 @@ const CornwallMap = (() => {
 
   // Draw order on the shared canvas, bottom to top. Labels and arrows are
   // DOM markers in their own pane, so their order doesn't matter.
-  const Z = { mask: 0, streams: 1, rivers: 2, roads: 3, boundary: 4, rail: 5, stations: 6, markers: 9 };
+  const Z = { mask: 0, streams: 1, rivers: 2, floods: 2.5, roads: 3, boundary: 4, rail: 5, stations: 6, markers: 9 };
 
   function addPart(layer, toggle, z, minZoom = 0) {
     parts.push({ layer, toggle, z, minZoom });
@@ -484,6 +487,61 @@ const CornwallMap = (() => {
       .catch(e => console.warn('No live readings:', e));
   }
 
+  // ---------------------------------------------------------------- flood warnings
+  // Areas with an Environment Agency flood warning or alert in force, tinted
+  // by severity. Warning areas are mostly narrow strips of floodplain, so they
+  // draw above the rivers, which show through the fill. FloodWarnings (floods.js) loads
+  // the data, which may arrive before or after the map starts.
+  const FLOOD_CLASS = { 1: 'severe', 2: 'warning', 3: 'alert' };
+  let floodWarnings = [];
+  let floodLayer = null;
+  const floodBounds = {};
+
+  function floodStyle(w) {
+    const colour = cssVar(`--flood-${FLOOD_CLASS[w.severity]}`);
+    return { color: colour, fillColor: colour, weight: 2 * zoomScale(), opacity: 0.95,
+      fillOpacity: w.severity === 3 ? 0.2 : 0.35, lineJoin: 'round' };
+  }
+
+  function drawFloods() {
+    if (!floodLayer) {
+      floodLayer = L.layerGroup();
+      addPart(floodLayer, 'floods', Z.floods);
+      // Each warning is a GeoJSON group; its polygons carry the warning.
+      restylers.push(() => floodLayer.eachLayer(group => group.eachLayer(l => l.setStyle(floodStyle(l.warning)))));
+    }
+    floodLayer.clearLayers();
+    // Least severe first, so the most severe draws on top.
+    for (const w of [...floodWarnings].sort((a, b) => b.severity - a.severity)) {
+      if (!w.geometry) continue;
+      const area = L.geoJSON({ type: 'Feature', geometry: w.geometry, properties: {} },
+        { renderer: renderers.rivers, style: floodStyle(w) });
+      area.eachLayer(l => { l.warning = w; });
+      area.bindTooltip(tip(w.area || w.id, w.label), TIP_OPTS);
+      area.on('click', e => L.popup({ className: 'stn-popup', maxWidth: 380, minWidth: 300, autoPanPadding: [24, 24] })
+        .setLatLng(e.latlng).setContent(FloodWarnings.detail(w, false)).openOn(map));
+      area.addTo(floodLayer);
+      floodBounds[w.id] = area.getBounds();
+    }
+    setCount('floods', floodWarnings.length);
+    updateVisibility();
+  }
+
+  function setFloodWarnings(list) {
+    floodWarnings = list || [];
+    if (map && legendReady) drawFloods();
+  }
+
+  function focusFlood(id) {
+    if (!map || !floodBounds[id]) return;
+    if (!toggles.floods.on) {
+      toggles.floods.on = true;
+      syncLegend($('.map-legend'));
+      updateVisibility();
+    }
+    map.fitBounds(floodBounds[id], { padding: [40, 40], maxZoom: 13 });
+  }
+
   // ---------------------------------------------------------------- legend
   function setCount(key, n) {
     const span = document.getElementById(`legend-count-${key}`);
@@ -509,6 +567,8 @@ const CornwallMap = (() => {
           Layers<span class="legend-chevron" aria-hidden="true"></span>
         </button>
         <div class="legend-body" id="legend-body">
+        ${title('floods', 'Flood warnings')}
+        ${item('floods', 'area flood-swatch', '--flood-warning', 'Warning and alert areas', '<span class="count" id="legend-count-floods"></span>')}
         ${title('live', 'Live readings')}
         ${item('levels', 'gauge level', '--level-normal', 'River levels', '<span class="count" id="legend-count-levels"></span>')}
         ${item('tidal', 'gauge tidal', '--tidal', 'Tidal levels', '<span class="count" id="legend-count-tidal"></span>')}
@@ -590,6 +650,8 @@ const CornwallMap = (() => {
     setTiles();
 
     addLegend();
+    legendReady = true;
+    drawFloods();
     map.on('zoomend', () => { loadStreamsIfNeeded(); sizeMarkers(); updateVisibility(); restylers.forEach(fn => fn()); });
     sizeMarkers();
 
@@ -647,5 +709,5 @@ const CornwallMap = (() => {
   }
 
   // `map` is exposed read-only for debugging from the console.
-  return { init, restyle, resize, get map() { return map; } };
+  return { init, restyle, resize, setFloodWarnings, focusFlood, get map() { return map; } };
 })();

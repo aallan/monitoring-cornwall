@@ -7,7 +7,7 @@
   <meta name="description" content="Rivers, streams, railways and major roads of Cornwall on one map.">
   <link rel="icon" type="image/svg+xml" href="img/favicon.svg?v=1">
   <link rel="stylesheet" href="lib/leaflet/leaflet.css?v=1.9.4">
-  <link rel="stylesheet" href="css/style.css?v=16">
+  <link rel="stylesheet" href="css/style.css?v=18">
   <script src="js/utils.js?v=2"></script>
 </head>
 <body>
@@ -15,10 +15,17 @@
   <div class="header-row">
     <h1>Monitoring Cornwall <span class="ticker">KERNOW</span></h1>
     <div class="header-buttons">
+      <span id="flood-pill" class="flood-pill" hidden aria-live="polite"><span class="flood-pill-dot"></span><span class="flood-pill-text"></span></span>
       <button id="theme-toggle" class="theme-toggle" aria-label="Toggle dark mode" title="Toggle dark mode"></button>
     </div>
   </div>
   <div id="status" class="status-line"></div>
+  <div id="flood-banner" class="flood-banner" hidden>
+    <button type="button" class="flood-summary" aria-expanded="false" aria-controls="flood-details">
+      <span class="flood-icon" aria-hidden="true"></span><span class="flood-summary-text"></span><span class="flood-chevron" aria-hidden="true"></span>
+    </button>
+    <div id="flood-details" class="flood-details" hidden></div>
+  </div>
   <nav id="nav">
     <a class="nav-btn" href="#/map">Map</a>
     <a class="nav-btn" href="#/about">About</a>
@@ -34,8 +41,8 @@
     <div class="section">
       <h2>About</h2>
       <div class="panel">
-        <p>A map of Cornwall's rivers, streams, railways and major roads, drawn from OpenStreetMap, with live
-          readings from the Environment Agency's river level, tidal and rain gauges and South West Water's storm overflow monitors. Each river ends where it
+        <p>A map of Cornwall's rivers, streams, railways and major roads, drawn from OpenStreetMap, with the
+          Environment Agency's flood warnings and alerts, live readings from its river level, tidal and rain gauges, and South West Water's storm overflow monitors. Each river ends where it
           meets the dimmed water outside the county, rather than running down the middle of the estuary to the sea. The railways are the passenger and freight
           network; heritage lines aren't shown. The roads are the A30, A38 and A39.</p>
         <p>The code is open source, under the MIT licence, at
@@ -50,6 +57,7 @@
         <table class="data-table">
           <thead><tr><th>Layer</th><th>Source</th><th>Licence</th></tr></thead>
           <tbody>
+            <tr><td>Flood warnings and alerts</td><td>Environment Agency real-time flood-monitoring API, checked every 5 minutes, with flood area outlines from the same API</td><td><a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/" rel="noopener">Open Government Licence</a></td></tr>
             <tr><td>River, tidal and rain gauges</td><td>Environment Agency real-time flood-monitoring API, checked every 5 minutes. This uses Environment Agency flood and river level data from the real-time data API (Beta).</td><td><a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/" rel="noopener">Open Government Licence</a></td></tr>
             <tr><td>Storm overflows</td><td>South West Water's storm overflow activity feed, checked every 5 minutes</td><td><a href="https://creativecommons.org/licenses/by/4.0/" rel="noopener">CC BY 4.0</a></td></tr>
             <tr><td>Storm overflow annual totals</td><td>Event Duration Monitoring annual returns. © Environment Agency copyright and/or database right.</td><td><a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/" rel="noopener">Open Government Licence</a></td></tr>
@@ -79,7 +87,8 @@
 
 <script src="lib/leaflet/leaflet.js?v=1.9.4"></script>
 <script src="js/stations.js?v=4"></script>
-<script src="js/map.js?v=13"></script>
-<script src="js/app.js?v=6"></script>
+<script src="js/map.js?v=16"></script>
+<script src="js/floods.js?v=2"></script>
+<script src="js/app.js?v=7"></script>
 </body>
 </html>

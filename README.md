@@ -1,10 +1,12 @@
 # Monitoring Cornwall
 
-A map of Cornwall's rivers, streams, railways and major roads, built from [OpenStreetMap](https://www.openstreetmap.org/) data, with live readings from the Environment Agency's river level, tidal and rain gauges and from South West Water's storm overflow monitors. It's a companion to [Floodwatch](https://github.com/aallan/floodwatch), which monitors the River Taw catchment in Devon at [tawriver.watch](https://tawriver.watch).
+A map of Cornwall's rivers, streams, railways and major roads, built from [OpenStreetMap](https://www.openstreetmap.org/) data, with the Environment Agency's flood warnings and alerts, live readings from its river level, tidal and rain gauges, and South West Water's storm overflow monitors. It's a companion to [Floodwatch](https://github.com/aallan/floodwatch), which monitors the River Taw catchment in Devon at [tawriver.watch](https://tawriver.watch).
 
 The site is a single page with no framework and no build step. The server, the readings poller and the map data pipeline use only the Python standard library, with readings kept in SQLite.
 
 ## What the map shows
+
+Flood warnings and alerts come from the Environment Agency, which issues flood warnings (severe, and ordinary) for specific places, and flood alerts for wider areas. When any are in force in Cornwall, a banner under the header says how many of each; opening it lists them with the Agency's message, and "Show on map" zooms to the area. Each area in force is drawn on the map, red for a severe flood warning, amber for a flood warning and yellow for a flood alert, and clicking it shows the same message. When none are in force, the header says so.
 
 Live readings come from the Environment Agency's [real-time flood-monitoring API](https://environment.data.gov.uk/flood-monitoring/doc/reference). Stations take a reading every 15 minutes, which the Environment Agency usually publishes within about half an hour, and the server checks for new ones every 5 minutes.
 
@@ -41,7 +43,7 @@ The rest of the map comes from OpenStreetMap.
 | Stations | `railway=station` and `railway=halt` | National Rail stations, each with its CRS code |
 | Major roads | `highway=trunk`, `primary` or `motorway` with a one- or two-digit A-road `ref` | The A30, A38 and A39, labelled with their numbers. Slip roads are left out |
 
-Every layer is on by default. Hovering over a river, line, road or station shows its name. Each row in the legend switches its layer on and off, and each section heading (Live readings, Storm overflows, Waterways, Railways, Roads) switches the whole section. The page follows the system's light or dark setting, with a toggle to override it.
+Every layer is on by default. Hovering over a river, line, road or station shows its name. Each row in the legend switches its layer on and off, and each section heading (Flood warnings, Live readings, Storm overflows, Waterways, Railways, Roads) switches the whole section. The page follows the system's light or dark setting, with a toggle to override it.
 
 ## Running it
 
@@ -84,6 +86,10 @@ Readings are kept indefinitely. 28 days of readings from all the county's statio
 
 Every 5 minutes it makes one request per kind of reading for the latest value from every station in England, keeps Cornwall's, and writes `site/data/live.json`, about 25 KB with every station's latest reading and state, which is everything the map needs to draw its markers. Then it fills gaps. A station whose newest reading is more than 15 minutes ahead of what was stored has missed readings, because the server was down or because the station uploads in batches, so its history is fetched from its last stored reading, four stations at a time. `live.json` is written again once the gaps are filled. A station's history is fetched from `/api/` only when its popup opens.
 
+## How flood warnings are collected
+
+Once a day the poller lists the Environment Agency's flood areas within 110 km of the county and keeps those whose county list includes Cornwall or the Isles of Scilly. Areas shared with Devon, such as the Tamar's, are listed as 'Cornwall, Devon', and the API's own county filter misses them, which is why the list is built this way; it has 84 areas. Every 5 minutes the poller reads the warnings in force across England, keeps those in Cornwall's areas, and writes them to `site/data/warnings.json`. An area's outline is fetched the first time it has a warning, simplified to about 25 m, and kept: alert areas can run to well over a megabyte as published. The Agency gives warning times without a timezone; they're read as UK clock time.
+
 ## How storm overflows are collected
 
 The overflow feed reports each overflow's current state and only its most recent spill, so the spill history is built up by polling. Every 5 minutes the poller reads all of South West Water's overflows in one request, about 380 KB, and for each of Cornwall's compares the latest spill with the last one stored. A new start time is a new spill, and the same start time with the overflow now quiet closes the open one. A spill that starts and ends entirely between two polls is still caught, because the feed keeps it as the latest event until the next one, but if two spills happen between polls the earlier is missed. The log starts when the server first runs, so the 30-day panel fills in over its first month. After each poll the server writes `site/data/overflows.json`, about 60 KB, for the markers; an overflow's log and yearly totals come from `/api/overflows/<id>` when its popup opens.
@@ -114,6 +120,7 @@ monitor/ea.py             Environment Agency client: stations, latest readings, 
 monitor/poll.py           the 5-minute poll cycle
 monitor/live.py           writes site/data/live.json
 monitor/overflows.py      South West Water storm overflows: list, spill log, annual totals
+monitor/floods.py         Environment Agency flood warnings and alerts, and their areas
 monitor/db.py             SQLite schema and connection
 monitor/geo.py            boundary geometry shared with the overlay builder
 scripts/fetch_geodata.py  OpenStreetMap to site/data/*.geojson, data/places.json and data/neighbours.geojson
@@ -122,6 +129,7 @@ site/index.html           the page
 site/css/style.css        layout and theme, light and dark
 site/js/map.js            basemap, boundary mask, overlays, station markers and legend
 site/js/stations.js       station and overflow popups and their charts
+site/js/floods.js         the flood warning banner and header indicator
 site/js/app.js            tab routing and the status line
 site/js/utils.js          escaping, formatting and the theme toggle
 ```

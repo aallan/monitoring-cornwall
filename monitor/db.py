@@ -62,6 +62,20 @@ CREATE TABLE IF NOT EXISTS overflow_annual (
     PRIMARY KEY (id, year)
 ) WITHOUT ROWID;
 
+-- Environment Agency flood warning and alert areas that cover Cornwall.
+-- Polygons are fetched only once an area has had a warning, then kept.
+CREATE TABLE IF NOT EXISTS flood_areas (
+    id          TEXT PRIMARY KEY,        -- EA flood area notation
+    kind        TEXT NOT NULL,           -- 'warning' or 'alert'
+    label       TEXT,
+    description TEXT,
+    river       TEXT,
+    county      TEXT,
+    geometry    TEXT,                    -- simplified GeoJSON geometry, once fetched
+    active      INTEGER NOT NULL DEFAULT 1,
+    updated     INTEGER NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS meta (
     key   TEXT PRIMARY KEY,
     value TEXT

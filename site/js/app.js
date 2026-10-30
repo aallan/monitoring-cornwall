@@ -48,4 +48,5 @@ document.addEventListener('DOMContentLoaded', () => {
   window.addEventListener('hashchange', route);
   route();
   loadMeta();
+  FloodWarnings.init();
 });
