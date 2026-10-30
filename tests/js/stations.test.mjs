@@ -133,3 +133,12 @@ test('coastal stations say what they are and where the waves come from', () => {
   assert.equal(marineKind({ source: 'cco', wspd: 3, pres: 1024 }), 'Weather station');
   assert.deepEqual(plain(marineRows({ wvht: 1.31, dpd: 14.29, mwd: 282.7 })), [['Waves', '1.3 m, every 14 s, from the WNW']]);
 });
+
+test('tide times show the day only when it is not today', () => {
+  const { fmtTideTime, tideRows } = StationPopup._internals;
+  const now = utc(2026, 9, 30, 15, 0);                 // Fri 30 Oct, 15:00
+  assert.equal(fmtTideTime(utc(2026, 9, 30, 20, 9), now), '20:09');
+  assert.equal(fmtTideTime(utc(2026, 9, 31, 2, 24), now), 'Sat 02:24');
+  assert.deepEqual(plain(tideRows([[utc(2026, 9, 30, 20, 9), 'high', 7.076], [utc(2026, 9, 31, 2, 24), 'low', 1.764]], now)),
+    [['High water', '20:09, 7.1 m'], ['Low water', 'Sat 02:24, 1.8 m']]);
+});

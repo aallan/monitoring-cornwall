@@ -186,3 +186,56 @@ class CoastalPoll(DBTestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+TIDES_LATEST = json.loads((FIXTURES / "cco_tides_latest.json").read_text())
+TIDES_PORT_ISAAC = json.loads((FIXTURES / "cco_tides_port_isaac.json").read_text())
+
+
+class Tides(DBTestCase):
+    NOW = marine.cco_time("20261030#150000")
+
+    def get(self, calls):
+        def cco_get(kind, key, params=None, when="latest"):
+            calls.append((kind, params, when))
+            return TIDES_PORT_ISAAC if params else TIDES_LATEST
+        return cco_get
+
+    def poll(self, calls, now=None):
+        with mock.patch.object(marine, "cco_get", side_effect=self.get(calls)), \
+                mock.patch.object(marine.overflows, "membership", return_value=cornish):
+            return marine.poll_tides(self.con, "key", now or self.NOW)
+
+    def test_events_from_a_run_of_predictions(self):
+        events = marine.tide_events(TIDES_PORT_ISAAC["features"])
+        self.assertEqual(len(events), 9)
+        self.assertEqual(events[0], (marine.cco_time("20261030#200900"), "high", 7.076))
+        self.assertEqual([k for _, k, _ in events[:4]], ["high", "low", "high", "low"])
+
+    def test_poll_stores_port_isaac_and_skips_empty_sites(self):
+        calls = []
+        self.assertEqual(self.poll(calls), 9)
+        # Newlyn and Devonport are listed without a reading, so only Port
+        # Isaac's predictions are asked for, 48 hours ahead.
+        ahead = [c for c in calls if c[1]]
+        self.assertEqual(len(ahead), 1)
+        self.assertEqual(ahead[0][1], {"sensor": "102", "duration": marine.TIDE_AHEAD})
+        self.assertEqual(ahead[0][2], "20261101150000")
+        out = {s["id"]: s for s in marine.summary(self.con, self.NOW)["stations"]}
+        self.assertEqual(out["cco-port-isaac"]["tides"][0], [marine.cco_time("20261030#200900"), "high", 7.076])
+        self.assertEqual(len(out["cco-port-isaac"]["tides"]), marine.TIDE_EVENTS_SHOWN)
+
+    def test_no_new_request_while_two_days_are_held(self):
+        self.poll([])
+        calls = []
+        self.poll(calls, self.NOW + 3600)
+        self.assertFalse([c for c in calls if c[1]])
+        calls = []
+        self.poll(calls, self.NOW + 20 * 3600)   # under 36 hours left: fetch again
+        self.assertTrue([c for c in calls if c[1]])
+
+    def test_only_future_tides_are_shown(self):
+        self.poll([])
+        later = marine.cco_time("20261031#090000")
+        tides = {s["id"]: s for s in marine.summary(self.con, later)["stations"]}["cco-port-isaac"]["tides"]
+        self.assertTrue(all(t[0] > later for t in tides))

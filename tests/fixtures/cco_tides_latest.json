@@ -1,0 +1,86 @@
+{
+ "type": "FeatureCollection",
+ "features": [
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "http://www.ntslf.org/data/realtime?port=Newlyn",
+    "sensor": "Newlyn",
+    "institution": "This record is external to NNRCMP and included as a reference to a site hosted elsewhere",
+    "date": null,
+    "value": null,
+    "type": "tidepredictions",
+    "hw": null,
+    "hw_timestamp": null,
+    "lw": null,
+    "lw_timestamp": null,
+    "prev_hw": null,
+    "prev_hw_timestamp": null,
+    "prev_lw": null,
+    "prev_lw_timestamp": null
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -5.5428333333,
+     50.103
+    ]
+   },
+   "id": "tidepredictions.http://www.ntslf.org/data/realtime?port=Newlyn"
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "http://www.ntslf.org/data/realtime?port=Plymouth",
+    "sensor": "Plymouth (Devonport)",
+    "institution": "This record is external to NNRCMP and included as a reference to a site hosted elsewhere",
+    "date": null,
+    "value": null,
+    "type": "tidepredictions",
+    "hw": null,
+    "hw_timestamp": null,
+    "lw": null,
+    "lw_timestamp": null,
+    "prev_hw": null,
+    "prev_hw_timestamp": null,
+    "prev_lw": null,
+    "prev_lw_timestamp": null
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -4.1852,
+     50.3684
+    ]
+   },
+   "id": "tidepredictions.http://www.ntslf.org/data/realtime?port=Plymouth"
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "102",
+    "sensor": "Port Isaac",
+    "institution": "Southwest Regional Coastal Monitoring Programme; National Network of Regional Coastal Monitoring Programmes",
+    "date": "20261030#153800",
+    "value": "2.283",
+    "type": "tidepredictions",
+    "hw": "7.076",
+    "hw_timestamp": "20261030#200900",
+    "lw": "1.764",
+    "lw_timestamp": "20261031#022400",
+    "prev_hw": "7.429",
+    "prev_hw_timestamp": "20261030#073900",
+    "prev_lw": "1.468",
+    "prev_lw_timestamp": "20261030#140400"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -4.83438,
+     50.59418
+    ]
+   },
+   "id": "tidepredictions.102"
+  }
+ ]
+}

@@ -645,6 +645,10 @@ const StationPopup = (() => {
     if (s.wvht != null) parts.push(`waves ${one(s.wvht)} m`);
     if (s.wspd != null) parts.push(`wind ${Math.round(mph(s.wspd))} mph${s.wdir != null ? ` ${compass(s.wdir)}` : ''}`);
     if (s.wtmp != null) parts.push(`sea ${one(s.wtmp)} °C`);
+    if (s.tides && s.tides.length) {
+      const [ts, kind] = s.tides[0];
+      parts.push(`${kind} water ${fmtTideTime(ts)}`);
+    }
     const text = parts.join(' · ') || 'no readings';
     return s.state === 'stale' ? `${text}, at ${fmtTime(s.ts)}` : text;
   }
@@ -664,6 +668,19 @@ const StationPopup = (() => {
     if (s.atmp != null) rows.push(['Air', `${one(s.atmp)} °C`]);
     if (s.pres != null) rows.push(['Pressure', `${Math.round(s.pres)} hPa`]);
     return rows;
+  }
+
+  // '20:09' today, 'Sat 02:24' on another day, in UK time.
+  function fmtTideTime(ts, now = Date.now() / 1000) {
+    const day = t => new Date(t * 1000).toLocaleDateString('en-GB', { timeZone: TZ });
+    const time = new Date(ts * 1000).toLocaleTimeString('en-GB', { timeZone: TZ, hour: '2-digit', minute: '2-digit' });
+    return day(ts) === day(now) ? time
+      : `${new Date(ts * 1000).toLocaleDateString('en-GB', { timeZone: TZ, weekday: 'short' })} ${time}`;
+  }
+
+  function tideRows(tides, now) {
+    return tides.map(([ts, kind, height]) => [kind === 'high' ? 'High water' : 'Low water',
+      `${fmtTideTime(ts, now)}${height != null ? `, ${one(height)} m` : ''}`]);
   }
 
   // What a station is, and whose data it is.
@@ -739,6 +756,12 @@ const StationPopup = (() => {
     if (rows.length) {
       const dl = node('dl', 'marine-grid');
       for (const [k, v] of rows) dl.append(node('dt', null, k), node('dd', null, v));
+      box.appendChild(dl);
+    }
+    if (s.tides && s.tides.length) {
+      box.appendChild(node('div', 'cso-head', 'Tide times'));
+      const dl = node('dl', 'marine-grid');
+      for (const [k, v] of tideRows(s.tides)) dl.append(node('dt', null, k), node('dd', null, v));
       box.appendChild(dl);
     }
     const views = MARINE_VIEWS.filter(v => s[v.field] != null);
@@ -903,6 +926,6 @@ const StationPopup = (() => {
     openBathing, bathingSummary, openMarine, marineSummary,
     // The chart arithmetic and formatting, for tests/js.
     _internals: { niceTicks, niceScale, levelAxis, timeTicks, tickLabel, rainBuckets, fmtValue, fmtFlow,
-      fmtCount, compass, marineRows, marineKind, sampleBand, BACTERIA },
+      fmtCount, compass, marineRows, marineKind, sampleBand, BACTERIA, fmtTideTime, tideRows },
   };
 })();

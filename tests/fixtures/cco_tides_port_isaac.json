@@ -1,0 +1,464 @@
+{
+ "type": "FeatureCollection",
+ "features": [
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "102",
+    "sensor": "Port Isaac",
+    "institution": "Southwest Regional Coastal Monitoring Programme; National Network of Regional Coastal Monitoring Programmes",
+    "date": "20261101#150000",
+    "value": "2.588",
+    "type": "tidepredictions",
+    "hw": "6.149",
+    "hw_timestamp": "20261101#221400",
+    "lw": "2.283",
+    "lw_timestamp": "20261101#161100",
+    "prev_hw": "6.566",
+    "prev_hw_timestamp": "20261101#093200",
+    "prev_lw": "2.227",
+    "prev_lw_timestamp": "20261101#032300"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -4.83438,
+     50.59418
+    ]
+   },
+   "id": "tidepredictions.102"
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "102",
+    "sensor": "Port Isaac",
+    "institution": "Southwest Regional Coastal Monitoring Programme; National Network of Regional Coastal Monitoring Programmes",
+    "date": "20261101#120000",
+    "value": "5.102",
+    "type": "tidepredictions",
+    "hw": "6.149",
+    "hw_timestamp": "20261101#221400",
+    "lw": "2.283",
+    "lw_timestamp": "20261101#161100",
+    "prev_hw": "6.566",
+    "prev_hw_timestamp": "20261101#093200",
+    "prev_lw": "2.227",
+    "prev_lw_timestamp": "20261101#032300"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -4.83438,
+     50.59418
+    ]
+   },
+   "id": "tidepredictions.102"
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "102",
+    "sensor": "Port Isaac",
+    "institution": "Southwest Regional Coastal Monitoring Programme; National Network of Regional Coastal Monitoring Programmes",
+    "date": "20261101#090000",
+    "value": "6.48",
+    "type": "tidepredictions",
+    "hw": "6.566",
+    "hw_timestamp": "20261101#093200",
+    "lw": "2.283",
+    "lw_timestamp": "20261101#161100",
+    "prev_hw": "6.573",
+    "prev_hw_timestamp": "20261031#210600",
+    "prev_lw": "2.227",
+    "prev_lw_timestamp": "20261101#032300"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -4.83438,
+     50.59418
+    ]
+   },
+   "id": "tidepredictions.102"
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "102",
+    "sensor": "Port Isaac",
+    "institution": "Southwest Regional Coastal Monitoring Programme; National Network of Regional Coastal Monitoring Programmes",
+    "date": "20261101#060000",
+    "value": "3.834",
+    "type": "tidepredictions",
+    "hw": "6.566",
+    "hw_timestamp": "20261101#093200",
+    "lw": "2.283",
+    "lw_timestamp": "20261101#161100",
+    "prev_hw": "6.573",
+    "prev_hw_timestamp": "20261031#210600",
+    "prev_lw": "2.227",
+    "prev_lw_timestamp": "20261101#032300"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -4.83438,
+     50.59418
+    ]
+   },
+   "id": "tidepredictions.102"
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "102",
+    "sensor": "Port Isaac",
+    "institution": "Southwest Regional Coastal Monitoring Programme; National Network of Regional Coastal Monitoring Programmes",
+    "date": "20261101#030000",
+    "value": "2.263",
+    "type": "tidepredictions",
+    "hw": "6.566",
+    "hw_timestamp": "20261101#093200",
+    "lw": "2.227",
+    "lw_timestamp": "20261101#032300",
+    "prev_hw": "6.573",
+    "prev_hw_timestamp": "20261031#210600",
+    "prev_lw": "1.908",
+    "prev_lw_timestamp": "20261031#150100"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -4.83438,
+     50.59418
+    ]
+   },
+   "id": "tidepredictions.102"
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "102",
+    "sensor": "Port Isaac",
+    "institution": "Southwest Regional Coastal Monitoring Programme; National Network of Regional Coastal Monitoring Programmes",
+    "date": "20261101#000000",
+    "value": "4.481",
+    "type": "tidepredictions",
+    "hw": "6.566",
+    "hw_timestamp": "20261101#093200",
+    "lw": "2.227",
+    "lw_timestamp": "20261101#032300",
+    "prev_hw": "6.573",
+    "prev_hw_timestamp": "20261031#210600",
+    "prev_lw": "1.908",
+    "prev_lw_timestamp": "20261031#150100"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -4.83438,
+     50.59418
+    ]
+   },
+   "id": "tidepredictions.102"
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "102",
+    "sensor": "Port Isaac",
+    "institution": "Southwest Regional Coastal Monitoring Programme; National Network of Regional Coastal Monitoring Programmes",
+    "date": "20261031#210000",
+    "value": "6.57",
+    "type": "tidepredictions",
+    "hw": "6.573",
+    "hw_timestamp": "20261031#210600",
+    "lw": "2.227",
+    "lw_timestamp": "20261101#032300",
+    "prev_hw": "6.997",
+    "prev_hw_timestamp": "20261031#083100",
+    "prev_lw": "1.908",
+    "prev_lw_timestamp": "20261031#150100"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -4.83438,
+     50.59418
+    ]
+   },
+   "id": "tidepredictions.102"
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "102",
+    "sensor": "Port Isaac",
+    "institution": "Southwest Regional Coastal Monitoring Programme; National Network of Regional Coastal Monitoring Programmes",
+    "date": "20261031#180000",
+    "value": "4.099",
+    "type": "tidepredictions",
+    "hw": "6.573",
+    "hw_timestamp": "20261031#210600",
+    "lw": "2.227",
+    "lw_timestamp": "20261101#032300",
+    "prev_hw": "6.997",
+    "prev_hw_timestamp": "20261031#083100",
+    "prev_lw": "1.908",
+    "prev_lw_timestamp": "20261031#150100"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -4.83438,
+     50.59418
+    ]
+   },
+   "id": "tidepredictions.102"
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "102",
+    "sensor": "Port Isaac",
+    "institution": "Southwest Regional Coastal Monitoring Programme; National Network of Regional Coastal Monitoring Programmes",
+    "date": "20261031#150000",
+    "value": "1.908",
+    "type": "tidepredictions",
+    "hw": "6.573",
+    "hw_timestamp": "20261031#210600",
+    "lw": "1.908",
+    "lw_timestamp": "20261031#150100",
+    "prev_hw": "6.997",
+    "prev_hw_timestamp": "20261031#083100",
+    "prev_lw": "1.764",
+    "prev_lw_timestamp": "20261031#022400"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -4.83438,
+     50.59418
+    ]
+   },
+   "id": "tidepredictions.102"
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "102",
+    "sensor": "Port Isaac",
+    "institution": "Southwest Regional Coastal Monitoring Programme; National Network of Regional Coastal Monitoring Programmes",
+    "date": "20261031#120000",
+    "value": "3.957",
+    "type": "tidepredictions",
+    "hw": "6.573",
+    "hw_timestamp": "20261031#210600",
+    "lw": "1.908",
+    "lw_timestamp": "20261031#150100",
+    "prev_hw": "6.997",
+    "prev_hw_timestamp": "20261031#083100",
+    "prev_lw": "1.764",
+    "prev_lw_timestamp": "20261031#022400"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -4.83438,
+     50.59418
+    ]
+   },
+   "id": "tidepredictions.102"
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "102",
+    "sensor": "Port Isaac",
+    "institution": "Southwest Regional Coastal Monitoring Programme; National Network of Regional Coastal Monitoring Programmes",
+    "date": "20261031#090000",
+    "value": "6.911",
+    "type": "tidepredictions",
+    "hw": "6.573",
+    "hw_timestamp": "20261031#210600",
+    "lw": "1.908",
+    "lw_timestamp": "20261031#150100",
+    "prev_hw": "6.997",
+    "prev_hw_timestamp": "20261031#083100",
+    "prev_lw": "1.764",
+    "prev_lw_timestamp": "20261031#022400"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -4.83438,
+     50.59418
+    ]
+   },
+   "id": "tidepredictions.102"
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "102",
+    "sensor": "Port Isaac",
+    "institution": "Southwest Regional Coastal Monitoring Programme; National Network of Regional Coastal Monitoring Programmes",
+    "date": "20261031#060000",
+    "value": "5.038",
+    "type": "tidepredictions",
+    "hw": "6.997",
+    "hw_timestamp": "20261031#083100",
+    "lw": "1.908",
+    "lw_timestamp": "20261031#150100",
+    "prev_hw": "7.076",
+    "prev_hw_timestamp": "20261030#200900",
+    "prev_lw": "1.764",
+    "prev_lw_timestamp": "20261031#022400"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -4.83438,
+     50.59418
+    ]
+   },
+   "id": "tidepredictions.102"
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "102",
+    "sensor": "Port Isaac",
+    "institution": "Southwest Regional Coastal Monitoring Programme; National Network of Regional Coastal Monitoring Programmes",
+    "date": "20261031#030000",
+    "value": "1.878",
+    "type": "tidepredictions",
+    "hw": "6.997",
+    "hw_timestamp": "20261031#083100",
+    "lw": "1.908",
+    "lw_timestamp": "20261031#150100",
+    "prev_hw": "7.076",
+    "prev_hw_timestamp": "20261030#200900",
+    "prev_lw": "1.764",
+    "prev_lw_timestamp": "20261031#022400"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -4.83438,
+     50.59418
+    ]
+   },
+   "id": "tidepredictions.102"
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "102",
+    "sensor": "Port Isaac",
+    "institution": "Southwest Regional Coastal Monitoring Programme; National Network of Regional Coastal Monitoring Programmes",
+    "date": "20261031#000000",
+    "value": "3.329",
+    "type": "tidepredictions",
+    "hw": "6.997",
+    "hw_timestamp": "20261031#083100",
+    "lw": "1.764",
+    "lw_timestamp": "20261031#022400",
+    "prev_hw": "7.076",
+    "prev_hw_timestamp": "20261030#200900",
+    "prev_lw": "1.468",
+    "prev_lw_timestamp": "20261030#140400"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -4.83438,
+     50.59418
+    ]
+   },
+   "id": "tidepredictions.102"
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "102",
+    "sensor": "Port Isaac",
+    "institution": "Southwest Regional Coastal Monitoring Programme; National Network of Regional Coastal Monitoring Programmes",
+    "date": "20261030#210000",
+    "value": "6.798",
+    "type": "tidepredictions",
+    "hw": "6.997",
+    "hw_timestamp": "20261031#083100",
+    "lw": "1.764",
+    "lw_timestamp": "20261031#022400",
+    "prev_hw": "7.076",
+    "prev_hw_timestamp": "20261030#200900",
+    "prev_lw": "1.468",
+    "prev_lw_timestamp": "20261030#140400"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -4.83438,
+     50.59418
+    ]
+   },
+   "id": "tidepredictions.102"
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "102",
+    "sensor": "Port Isaac",
+    "institution": "Southwest Regional Coastal Monitoring Programme; National Network of Regional Coastal Monitoring Programmes",
+    "date": "20261030#180000",
+    "value": "5.43",
+    "type": "tidepredictions",
+    "hw": "7.076",
+    "hw_timestamp": "20261030#200900",
+    "lw": "1.764",
+    "lw_timestamp": "20261031#022400",
+    "prev_hw": "7.429",
+    "prev_hw_timestamp": "20261030#073900",
+    "prev_lw": "1.468",
+    "prev_lw_timestamp": "20261030#140400"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -4.83438,
+     50.59418
+    ]
+   },
+   "id": "tidepredictions.102"
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "102",
+    "sensor": "Port Isaac",
+    "institution": "Southwest Regional Coastal Monitoring Programme; National Network of Regional Coastal Monitoring Programmes",
+    "date": "20261030#150000",
+    "value": "1.763",
+    "type": "tidepredictions",
+    "hw": "7.076",
+    "hw_timestamp": "20261030#200900",
+    "lw": "1.764",
+    "lw_timestamp": "20261031#022400",
+    "prev_hw": "7.429",
+    "prev_hw_timestamp": "20261030#073900",
+    "prev_lw": "1.468",
+    "prev_lw_timestamp": "20261030#140400"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -4.83438,
+     50.59418
+    ]
+   },
+   "id": "tidepredictions.102"
+  }
+ ]
+}

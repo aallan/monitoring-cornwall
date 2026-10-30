@@ -126,6 +126,15 @@ CREATE TABLE IF NOT EXISTS marine_obs (
     PRIMARY KEY (station, ts)
 ) WITHOUT ROWID;
 
+-- Predicted high and low waters at stations that publish tide predictions.
+CREATE TABLE IF NOT EXISTS tide_events (
+    station TEXT    NOT NULL,
+    ts      INTEGER NOT NULL,            -- Unix seconds, UTC
+    kind    TEXT    NOT NULL,            -- 'high' or 'low'
+    height  REAL,                        -- metres, at the station's gauge
+    PRIMARY KEY (station, ts)
+) WITHOUT ROWID;
+
 CREATE TABLE IF NOT EXISTS meta (
     key   TEXT PRIMARY KEY,
     value TEXT

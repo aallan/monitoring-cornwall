@@ -82,7 +82,7 @@ def fetch(station):
 
 # ---------------------------------------------------------------- CCO
 
-CCO_FEED = "https://coastalmonitoring.org/observations/{}/latest.geojson"
+CCO_FEED = "https://coastalmonitoring.org/observations/{}/{}.geojson"
 CCO_REFERER = "https://cornwall.watch/"
 CCO_FIELDS = {
     "waves": {"hs": "wvht", "tp": "dpd", "tz": "apd", "pdir": "mwd", "sst": "wtmp"},
@@ -113,9 +113,12 @@ def cco_row(kind, props):
     return row
 
 
-def cco_get(kind, key, params=None):
+def cco_get(kind, key, params=None, when="latest"):
+    """A CCO feed: the latest readings, or with `when` (YYYYMMDDHHMMSS) and a
+    duration in hours, those up to that time, which for tide predictions can
+    be in the future."""
     query = f"?{urllib.parse.urlencode(params)}" if params else ""
-    req = urllib.request.Request(CCO_FEED.format(kind) + query, headers={
+    req = urllib.request.Request(CCO_FEED.format(kind, when) + query, headers={
         "User-Agent": USER_AGENT, "Accept": "application/json",
         "X-API-Key": key, "Referer": os.environ.get("CCO_REFERER", CCO_REFERER)})
     return json.loads(net.fetch(req))
@@ -173,6 +176,59 @@ def poll_cco(con, key, now=None):
     return n
 
 
+# ---------------------------------------------------------------- tides
+
+TIDE_AHEAD = 48         # hours of predictions fetched at a time
+TIDE_KEEP_AHEAD = 36    # fetch again once fewer hours than this are held
+TIDE_EVENTS_SHOWN = 4
+
+
+def tide_events(features):
+    """The high and low waters named in a run of predictions: each one carries
+    the next high and low after it. Returns [(ts, 'high'|'low', height)]."""
+    events = {}
+    for f in features:
+        p = f.get("properties") or {}
+        for kind, height, when in (("high", p.get("hw"), p.get("hw_timestamp")),
+                                   ("low", p.get("lw"), p.get("lw_timestamp"))):
+            ts = cco_time(when)
+            if ts is not None:
+                events[ts] = (ts, kind, _number(height))
+    return sorted(events.values())
+
+
+def poll_tides(con, key, now=None):
+    """Read tide predictions for the Cornish sites that publish them, when
+    fewer than TIDE_KEEP_AHEAD hours of them are held. Returns events stored."""
+    now = int(now or time.time())
+    belongs = overflows.membership()
+    n = 0
+    for f in cco_get("tidepredictions", key).get("features", []):
+        p = f.get("properties") or {}
+        name = p.get("sensor")
+        try:
+            lon, lat = f["geometry"]["coordinates"][:2]
+        except (KeyError, TypeError, ValueError):
+            continue
+        # Sites listed without a reading publish their predictions elsewhere.
+        if not name or cco_time(p.get("date")) is None or not in_region(lat, lon) or not belongs(lon, lat):
+            continue
+        sid = cco_id(name)
+        held = con.execute("SELECT MAX(ts) FROM tide_events WHERE station = ?", (sid,)).fetchone()[0]
+        if held and held - now > TIDE_KEEP_AHEAD * 3600:
+            continue
+        if not con.execute("SELECT 1 FROM marine_stations WHERE id = ?", (sid,)).fetchone():
+            upsert_station(con, sid, name, "cco", round(lat, 5), round(lon, 5), now)
+        when = time.strftime("%Y%m%d%H%M%S", time.gmtime(now + TIDE_AHEAD * 3600))
+        fc = cco_get("tidepredictions", key, {"sensor": str(p.get("id")), "duration": TIDE_AHEAD}, when=when)
+        events = tide_events(fc.get("features", []))
+        con.executemany("INSERT OR REPLACE INTO tide_events (station, ts, kind, height) VALUES (?, ?, ?, ?)",
+                        [(sid, ts, kind, h) for ts, kind, h in events])
+        n += len(events)
+    con.execute("DELETE FROM tide_events WHERE ts < ?", (now - 86400,))
+    return n
+
+
 # ---------------------------------------------------------------- storage
 
 def _number(v):
@@ -222,6 +278,10 @@ def poll(con, now=None):
             n += poll_cco(con, key, now)
         except Exception as e:  # noqa: BLE001
             errors.append(f"coastal stations: {e}")
+        try:
+            poll_tides(con, key, now)
+        except Exception as e:  # noqa: BLE001
+            errors.append(f"tide predictions: {e}")
     con.commit()
     return n, errors
 
@@ -250,6 +310,10 @@ def summary(con, now=None):
             continue
         ts, values = latest(con, s["id"])
         entry = {"id": s["id"], "name": s["name"], "source": s["source"], "lat": s["lat"], "lon": s["lon"]}
+        tides = con.execute("SELECT ts, kind, height FROM tide_events WHERE station = ? AND ts > ? ORDER BY ts LIMIT ?",
+                            (s["id"], now, TIDE_EVENTS_SHOWN)).fetchall()
+        if tides:
+            entry["tides"] = [list(t) for t in tides]
         if ts is None:
             entry["state"] = "no-data"
         else:
