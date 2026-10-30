@@ -107,8 +107,10 @@ def poll_bathing(con):
 
 
 def poll_marine(con):
-    """Offshore stations report hourly, so they're read every half hour."""
-    if time.time() - int(db.get_meta(con, "marine_refreshed", 0)) > marine.REFRESH:
+    """The sea stations report every half hour or hour, so they're read every
+    half hour, and straight away whenever none are known yet."""
+    known = con.execute("SELECT COUNT(*) FROM marine_stations WHERE active = 1").fetchone()[0]
+    if not known or time.time() - int(db.get_meta(con, "marine_refreshed", 0)) > marine.REFRESH:
         n, errors = marine.poll(con)
         db.set_meta(con, "marine_refreshed", int(time.time()))
         con.commit()

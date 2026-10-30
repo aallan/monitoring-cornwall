@@ -4,7 +4,7 @@ import unittest
 from unittest import mock
 
 from monitor import poll
-from tests.support import QuietTestCase
+from tests.support import DBTestCase, QuietTestCase
 
 
 class Cycle(QuietTestCase):
@@ -43,3 +43,22 @@ class Cycle(QuietTestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class Marine(DBTestCase):
+    def test_polls_straight_away_when_no_stations_are_known(self):
+        # Polled a minute ago, but the station list is empty, as after an
+        # upgrade that added it: poll now rather than in half an hour.
+        poll.db.set_meta(self.con, "marine_refreshed", int(poll.time.time()) - 60)
+        with mock.patch.object(poll.marine, "poll", return_value=(0, [])) as marine_poll, \
+                mock.patch.object(poll.marine, "write_summary"):
+            poll.poll_marine(self.con)
+        marine_poll.assert_called_once()
+
+    def test_waits_half_an_hour_once_stations_are_known(self):
+        poll.db.set_meta(self.con, "marine_refreshed", int(poll.time.time()) - 60)
+        poll.marine.upsert_station(self.con, "62107", "Seven Stones lightvessel", "ndbc", 50.102, -6.1, 0)
+        with mock.patch.object(poll.marine, "poll", return_value=(0, [])) as marine_poll, \
+                mock.patch.object(poll.marine, "write_summary"):
+            poll.poll_marine(self.con)
+        marine_poll.assert_not_called()
