@@ -379,11 +379,11 @@ footer { width: 100%; padding: 0 2rem 1.5rem; }
 .stn.is-stale, .stn.is-no-data { background: var(--station-fill); border-color: var(--text-tertiary); box-shadow: none; }
 
 /* Legend swatches for the station kinds */
-.swatch.stn::before { left: 6px; right: auto; width: 10px; height: 10px; }
-.swatch.stn.level::before { border-radius: 50%; background: var(--level-normal); }
-.swatch.stn.tidal::before { width: 8px; height: 8px; left: 7px; border-radius: 1px; transform: translateY(-50%) rotate(45deg); background: var(--tidal); }
-.swatch.stn.rain::before { border-radius: 50% 50% 50% 0; transform: translateY(-50%) rotate(-45deg); background: var(--rain); }
-.legend-item.off .swatch.stn::before { opacity: 0.3; }
+.swatch.gauge::before { left: 6px; right: auto; width: 10px; height: 10px; }
+.swatch.gauge.level::before { border-radius: 50%; background: var(--level-normal); }
+.swatch.gauge.tidal::before { width: 8px; height: 8px; left: 7px; border-radius: 1px; transform: translateY(-50%) rotate(45deg); background: var(--tidal); }
+.swatch.gauge.rain::before { border-radius: 50% 50% 50% 0; transform: translateY(-50%) rotate(-45deg); background: var(--rain); }
+.legend-item.off .swatch.gauge::before { opacity: 0.3; }
 
 /* Station popup: a house-style card */
 .stn-popup .leaflet-popup-content-wrapper {

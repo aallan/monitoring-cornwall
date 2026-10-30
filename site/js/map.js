@@ -455,9 +455,9 @@ const CornwallMap = (() => {
         </button>
         <div class="legend-body" id="legend-body">
         ${title('live', 'Live readings')}
-        ${item('levels', 'stn level', '--level-normal', 'River levels', '<span class="count" id="legend-count-levels"></span>')}
-        ${item('tidal', 'stn tidal', '--tidal', 'Tidal levels', '<span class="count" id="legend-count-tidal"></span>')}
-        ${item('rain', 'stn rain', '--rain', 'Rain gauges', '<span class="count" id="legend-count-rain"></span>')}
+        ${item('levels', 'gauge level', '--level-normal', 'River levels', '<span class="count" id="legend-count-levels"></span>')}
+        ${item('tidal', 'gauge tidal', '--tidal', 'Tidal levels', '<span class="count" id="legend-count-tidal"></span>')}
+        ${item('rain', 'gauge rain', '--rain', 'Rain gauges', '<span class="count" id="legend-count-rain"></span>')}
         ${title('waterways', 'Waterways')}
         ${item('rivers', 'line', '--water', 'Rivers', '<span class="count" id="legend-count-rivers"></span>')}
         ${item('streams', 'line thin', '--water-minor', 'Streams', '<span class="count" id="legend-streams-hint"></span>')}
