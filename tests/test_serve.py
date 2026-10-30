@@ -111,6 +111,8 @@ class Bathing(Server):
 
 class Marine(Server):
     def test_marine_history(self):
+        self.con.execute("INSERT INTO marine_stations (id, name, source, lat, lon, updated) "
+                         "VALUES ('62107', 'Seven Stones lightvessel', 'ndbc', 50.102, -6.1, 0)")
         self.con.execute("INSERT INTO marine_obs (station, ts, wvht) VALUES ('62107', ?, 1.9)", (int(time.time()) - 600,))
         self.con.commit()
         status, d = self.get_json("/api/marine/62107?days=2")

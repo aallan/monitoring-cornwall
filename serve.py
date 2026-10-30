@@ -103,16 +103,17 @@ class Handler(SimpleHTTPRequestHandler):
             except Exception:  # noqa: BLE001 - the popup says the samples are unavailable
                 return self.send_json({"error": "samples unavailable"}, 502)
         # /api/marine/<station>?days=N: an offshore station's recent readings
-        if len(parts) == 3 and parts[:2] == ["api", "marine"] and parts[2] in marine.STATIONS:
+        if len(parts) == 3 and parts[:2] == ["api", "marine"] and STATION_ID.match(parts[2]):
             try:
                 days = int(urllib.parse.parse_qs(url.query).get("days", ["7"])[0])
             except ValueError:
                 days = 7
             con = db.connect(read_only=True)
             try:
-                return self.send_json(marine.history(con, parts[2], days))
+                found = marine.history(con, parts[2], days)
             finally:
                 con.close()
+            return self.send_json(found) if found else self.send_json({"error": "no such station"}, 404)
         # /api/forecast/rain/<station id>: the next 48 hours at a rain gauge
         if len(parts) == 4 and parts[:3] == ["api", "forecast", "rain"] and STATION_ID.match(parts[3]):
             con = db.connect(read_only=True)

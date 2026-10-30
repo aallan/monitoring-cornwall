@@ -502,7 +502,8 @@ const CornwallMap = (() => {
 
   // ---------------------------------------------------------------- coast
   // Bathing waters, coloured by their classification, with a badge on days
-  // the pollution risk forecast is raised; and offshore weather stations.
+  // the pollution risk forecast is raised; and wave buoys and weather stations
+  // at sea and on the coast.
   const coastGroups = { bathing: L.layerGroup(), offshore: L.layerGroup() };
   let coastRegistered = false;
   const BW_CLASS = { Excellent: 'excellent', Good: 'good', Sufficient: 'sufficient', Poor: 'poor' };
@@ -679,7 +680,7 @@ const CornwallMap = (() => {
         <div class="legend-key"><span class="bw-key is-excellent"></span>excellent<span class="bw-key is-good"></span>good</div>
         <div class="legend-key"><span class="bw-key is-sufficient"></span>sufficient<span class="bw-key is-poor"></span>poor</div>
         <div class="legend-key"><span class="bw-key is-risk"></span>pollution risk raised today</div>
-        ${item('offshore', 'buoy-swatch', '--sea', 'Offshore stations', '<span class="count" id="legend-count-offshore"></span>')}
+        ${item('offshore', 'buoy-swatch', '--sea', 'Buoys and weather stations', '<span class="count" id="legend-count-offshore"></span>')}
         ${title('railways', 'Railways')}
         ${item('passenger', 'line', '--rail', 'Passenger lines')}
         ${item('freight', 'dash', '--rail-freight', 'Freight branches')}
@@ -745,7 +746,7 @@ const CornwallMap = (() => {
     map.attributionControl.addAttribution('Readings: <a href="https://environment.data.gov.uk/flood-monitoring/doc/reference">Environment Agency</a>');
     map.attributionControl.addAttribution('Overflows: <a href="https://www.arcgis.com/home/item.html?id=cabfce76b72a4a278a33d737c0708d42">South West Water</a>');
     map.attributionControl.addAttribution('Forecasts: <a href="https://open-meteo.com/">Open-Meteo</a>, <a href="https://nrfa.ceh.ac.uk/">NRFA</a>');
-    map.attributionControl.addAttribution('Sea: <a href="https://www.metoffice.gov.uk/">Met Office</a> via <a href="https://www.ndbc.noaa.gov/">NOAA</a>');
+    map.attributionControl.addAttribution('Sea: <a href="https://www.metoffice.gov.uk/">Met Office</a> via <a href="https://www.ndbc.noaa.gov/">NOAA</a>, <a href="https://coastalmonitoring.org/">Coastal Monitoring</a>');
     map.setView([50.45, -4.95], 9, { animate: false });  // placeholder until the container has a size
     makePanes();
     setTiles();

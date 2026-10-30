@@ -97,7 +97,19 @@ CREATE TABLE IF NOT EXISTS bathing_waters (
     updated        INTEGER NOT NULL
 );
 
--- Hourly observations from offshore stations; NULL where not reported.
+-- Stations at sea and on the coast: the Met Office's offshore stations, and
+-- the Regional Coastal Monitoring Programme's wave buoys and weather stations.
+CREATE TABLE IF NOT EXISTS marine_stations (
+    id      TEXT PRIMARY KEY,            -- e.g. 62107, or cco-looe-bay
+    name    TEXT NOT NULL,
+    source  TEXT NOT NULL,               -- 'ndbc' or 'cco'
+    lat     REAL NOT NULL,
+    lon     REAL NOT NULL,
+    active  INTEGER NOT NULL DEFAULT 1,
+    updated INTEGER NOT NULL
+);
+
+-- Observations at those stations; NULL where not reported.
 CREATE TABLE IF NOT EXISTS marine_obs (
     station TEXT    NOT NULL,
     ts      INTEGER NOT NULL,            -- Unix seconds, UTC
@@ -105,7 +117,8 @@ CREATE TABLE IF NOT EXISTS marine_obs (
     wspd    REAL,                        -- wind speed, m/s
     gst     REAL,                        -- gust, m/s
     wvht    REAL,                        -- significant wave height, m
-    dpd     REAL,                        -- dominant wave period, s
+    dpd     REAL,                        -- dominant (peak) wave period, s
+    mwd     REAL,                        -- direction the waves come from, degrees
     apd     REAL,                        -- average wave period, s
     pres    REAL,                        -- air pressure, hPa
     atmp    REAL,                        -- air temperature, °C
@@ -120,6 +133,13 @@ CREATE TABLE IF NOT EXISTS meta (
 """
 
 
+# Columns added since a table was first created: (table, column, type).
+# connect() adds any that an existing database lacks.
+ADDED_COLUMNS = [
+    ("marine_obs", "mwd", "REAL"),
+]
+
+
 def connect(read_only=False):
     """Open the database, creating it and its schema if needed."""
     DB_PATH.parent.mkdir(exist_ok=True)
@@ -128,6 +148,9 @@ def connect(read_only=False):
     con.execute("PRAGMA journal_mode=WAL")
     con.execute("PRAGMA synchronous=NORMAL")
     con.executescript(SCHEMA)
+    for table, column, kind in ADDED_COLUMNS:
+        if column not in {r["name"] for r in con.execute(f"PRAGMA table_info({table})")}:
+            con.execute(f"ALTER TABLE {table} ADD COLUMN {column} {kind}")
     if read_only:
         con.execute("PRAGMA query_only=ON")
     return con

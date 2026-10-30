@@ -1,0 +1,129 @@
+{
+ "type": "FeatureCollection",
+ "features": [
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "98",
+    "sensor": "Looe Bay",
+    "institution": "Southwest Regional Coastal Monitoring Programme; National Network of Regional Coastal Monitoring Programmes",
+    "date": "20261030#140000",
+    "gps_latitude": "50.33881",
+    "gps_longitude": "-4.41155",
+    "hs": "0.920",
+    "hmax": "1.420",
+    "sst": "15.000",
+    "type": "waves",
+    "value": "140.600",
+    "tp": "4.350",
+    "tz": "3.6040",
+    "pdir": "140.600",
+    "spread": "25.600",
+    "te": "4.600",
+    "power": "1.890",
+    "QCflag": null
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -4.41083,
+     50.33866
+    ]
+   },
+   "id": "waves.98"
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "98",
+    "sensor": "Looe Bay",
+    "institution": "Southwest Regional Coastal Monitoring Programme; National Network of Regional Coastal Monitoring Programmes",
+    "date": "20261030#133000",
+    "gps_latitude": "50.33874",
+    "gps_longitude": "-4.41153",
+    "hs": "0.960",
+    "hmax": "1.290",
+    "sst": "15.000",
+    "type": "waves",
+    "value": "123.800",
+    "tp": "4.550",
+    "tz": "3.6040",
+    "pdir": "123.800",
+    "spread": "28.200",
+    "te": "4.700",
+    "power": "2.110",
+    "QCflag": null
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -4.41083,
+     50.33866
+    ]
+   },
+   "id": "waves.98"
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "98",
+    "sensor": "Looe Bay",
+    "institution": "Southwest Regional Coastal Monitoring Programme; National Network of Regional Coastal Monitoring Programmes",
+    "date": "20261030#130000",
+    "gps_latitude": "50.33869",
+    "gps_longitude": "-4.41150",
+    "hs": "1.010",
+    "hmax": "1.520",
+    "sst": "15.000",
+    "type": "waves",
+    "value": "133.600",
+    "tp": "4.760",
+    "tz": "3.6040",
+    "pdir": "133.600",
+    "spread": "29.500",
+    "te": "4.500",
+    "power": "2.230",
+    "QCflag": null
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -4.41083,
+     50.33866
+    ]
+   },
+   "id": "waves.98"
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "98",
+    "sensor": "Looe Bay",
+    "institution": "Southwest Regional Coastal Monitoring Programme; National Network of Regional Coastal Monitoring Programmes",
+    "date": "20261030#123000",
+    "gps_latitude": "50.33870",
+    "gps_longitude": "-4.41153",
+    "hs": "0.980",
+    "hmax": "1.570",
+    "sst": "15.000",
+    "type": "waves",
+    "value": "135.000",
+    "tp": "4.000",
+    "tz": "3.5710",
+    "pdir": "135.000",
+    "spread": "27.800",
+    "te": "4.600",
+    "power": "2.160",
+    "QCflag": null
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -4.41083,
+     50.33866
+    ]
+   },
+   "id": "waves.98"
+  }
+ ]
+}

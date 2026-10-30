@@ -1,0 +1,113 @@
+{
+ "type": "FeatureCollection",
+ "features": [
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "128",
+    "sensor": "Bude",
+    "institution": "Southwest Regional Coastal Monitoring Programme; National Network of Regional Coastal Monitoring Programmes",
+    "date": "20261030#150000",
+    "value": "3.0300",
+    "type": "met",
+    "dir": "125.000",
+    "temp": "16.700",
+    "speed": "3.0300",
+    "gust": "4.690",
+    "pressure": "1024.1",
+    "rainfall": "0.000",
+    "humidity": "61.000",
+    "QCflag": null
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -4.55006,
+     50.83078
+    ]
+   },
+   "id": "met.128"
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "117",
+    "sensor": "Exmouth",
+    "institution": "Southwest Regional Coastal Monitoring Programme; National Network of Regional Coastal Monitoring Programmes",
+    "date": "20261030#150000",
+    "value": "5.7000",
+    "type": "met",
+    "dir": "95.000",
+    "temp": "15.300",
+    "speed": "5.7000",
+    "gust": "9.900",
+    "pressure": "1025.3",
+    "rainfall": "0.000",
+    "humidity": "68.900",
+    "QCflag": null
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -3.42357,
+     50.61739
+    ]
+   },
+   "id": "met.117"
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "98",
+    "sensor": "Looe Bay",
+    "institution": "Southwest Regional Coastal Monitoring Programme; National Network of Regional Coastal Monitoring Programmes",
+    "date": "20261030#150000",
+    "value": "5.8000",
+    "type": "met",
+    "dir": "101.000",
+    "temp": "15.300",
+    "speed": "5.8000",
+    "gust": "8.400",
+    "pressure": "1025.0",
+    "rainfall": "0.000",
+    "humidity": "71.000",
+    "QCflag": null
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -4.45314,
+     50.34958
+    ]
+   },
+   "id": "met.98"
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "75",
+    "sensor": "Penzance",
+    "institution": "Southwest Regional Coastal Monitoring Programme; National Network of Regional Coastal Monitoring Programmes",
+    "date": "20260331#235000",
+    "value": null,
+    "type": "met",
+    "dir": null,
+    "temp": null,
+    "speed": null,
+    "gust": null,
+    "pressure": null,
+    "rainfall": null,
+    "humidity": null,
+    "QCflag": "9"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -5.5298,
+     50.11735
+    ]
+   },
+   "id": "met.75"
+  }
+ ]
+}

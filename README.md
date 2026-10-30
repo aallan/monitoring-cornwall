@@ -37,7 +37,7 @@ An overflow's popup shows its spills over the last 30 days as a timeline, and it
 
 Around the coast, the map shows the Environment Agency's 90 designated bathing waters in Cornwall; the Isles of Scilly have none. Each is a square coloured by its latest annual classification, which rests on four years of samples: Excellent, Good, Sufficient or Poor. During the bathing season, May to September, the Agency forecasts each morning whether the day's pollution risk is raised, usually after heavy rain, and a square carries an amber badge when it is. A bathing water's popup shows its latest sample and charts its last 25, for E. coli and intestinal enterococci in turn, on a log scale against the Excellent standard for coastal waters: 250 and 100 per 100 ml. Bars above that standard are amber, and above the Sufficient standard (500 and 185) red. The popup links to the Agency's profile of the bathing water.
 
-Two offshore stations report the weather at sea each hour: the Met Office's Seven Stones lightvessel, between Land's End and the Isles of Scilly, which measures waves, and its E1 buoy, about 35 km south of Looe, which measures wind. Both report sea and air temperature and pressure. Their popups chart the last week of whatever each one measures.
+Wave buoys and weather stations report the sea and the weather around the coast. The Regional Coastal Monitoring Programme's buoys at Looe Bay, Penzance, Perranporth, Porthleven, Port Isaac and St Mary's Sound measure wave height, period and direction and the sea temperature every half hour, and its weather stations at Bude, Looe Bay, Perranporth and Port Isaac measure wind, air temperature and pressure; a site with both is one station on the map. Offshore, the Met Office's Seven Stones lightvessel, between Land's End and the Isles of Scilly, measures waves, and its E1 buoy, about 35 km south of Looe, measures wind, each hour. Every station's popup charts the last week of whatever it measures.
 
 All of these markers grow as the map zooms in.
 
@@ -130,7 +130,13 @@ cd /srv/monitoring-cornwall && chown -R monitor:monitor .cache
 runuser -u monitor -- python3 scripts/fetch_geodata.py --cached
 ```
 
-The service runs as the unprivileged `monitor` user and can write only to `data/`, `site/data/` and `.cache/`. Settings that don't belong in the repository, such as API keys, go in `/etc/monitoring-cornwall.env`, readable only by root, which the service reads at start. Its log is in the journal:
+The service runs as the unprivileged `monitor` user and can write only to `data/`, `site/data/` and `.cache/`. Settings that don't belong in the repository go in `/etc/monitoring-cornwall.env`, readable only by root, which the service reads at start. The one it uses is `CCO_API_KEY`, the Channel Coastal Observatory's API key for the coastal stations:
+
+```bash
+install -m 600 -o root -g root /dev/null /etc/monitoring-cornwall.env
+echo 'CCO_API_KEY=…' >> /etc/monitoring-cornwall.env
+systemctl restart monitoring-cornwall
+``` Its log is in the journal:
 
 ```bash
 journalctl -u monitoring-cornwall -f
@@ -162,7 +168,7 @@ An overflow counts as Cornish if it's inside the county boundary. Outfalls often
 
 Every hour the poller reads all of Cornwall's bathing waters from the Environment Agency's bathing water quality API in one request, with each one's sampling point, latest classification, pollution risk forecast and sample, and writes `site/data/bathing.json`. A forecast is shown until it expires, so outside the season none is. A bathing water's last 25 samples come from `/api/bathing/<id>`, which the server fetches from the Agency when a popup asks and keeps for six hours.
 
-Every 30 minutes it reads the offshore stations' observation files from NOAA's National Data Buoy Center, which republishes the Met Office's hourly reports, and stores each hour's readings. `site/data/marine.json` holds each station's latest value of everything it measures, and `/api/marine/<id>` returns up to 28 days for the popup charts.
+Every 30 minutes it reads the offshore stations' observation files from NOAA's National Data Buoy Center, which republishes the Met Office's hourly reports, and the coastal stations from the Channel Coastal Observatory's API. The API needs a key issued for the site's domain, which the server reads from the `CCO_API_KEY` environment variable and sends with the domain as the `Referer`; without a key the coastal stations are skipped. The poller lists the API's sensors within 3 km of the county and nearer to Cornwall than to Devon that have reported in the last month, the same test the overflows use, takes each one's position from the API, and fetches up to a week of history the first time it sees a sensor and only what's missing after that. `site/data/marine.json` holds each station's latest value of everything it measures, and `/api/marine/<id>` returns up to 28 days for the popup charts.
 
 ## How forecasts are fetched
 
@@ -203,7 +209,8 @@ monitor/overflows.py      South West Water storm overflows: list, spill log, ann
 monitor/floods.py         Environment Agency flood warnings and alerts, and their areas
 monitor/forecast.py       rain and river flow forecasts from Open-Meteo, and the flow outlets
 monitor/bathing.py        Environment Agency bathing waters: classifications, forecasts, samples
-monitor/marine.py         offshore stations, from the NDBC's copies of Met Office reports
+monitor/marine.py         offshore and coastal stations: Met Office reports via the NDBC, and the CCO's buoys
+monitor/net.py            HTTP requests with a time limit on the whole answer
 monitor/cache.py          fetching popup data on demand, with an in-memory cache
 monitor/db.py             SQLite schema and connection
 monitor/geo.py            boundary geometry shared with the overlay builder
@@ -230,4 +237,4 @@ Bug reports, corrections and pull requests are welcome; [CONTRIBUTING.md](CONTRI
 
 The code is released under the [MIT licence](LICENSE).
 
-The map data is © OpenStreetMap contributors, available under the [Open Database Licence](https://www.openstreetmap.org/copyright). This uses Environment Agency flood and river level data from the real-time data API (Beta), available under the [Open Government Licence](https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/). Storm overflow activity is © South West Water, under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), and the overflow annual returns are © Environment Agency copyright and/or database right, under the Open Government Licence. Weather and river flow forecasts are from [Open-Meteo](https://open-meteo.com/), under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), with river flows generated using Copernicus Emergency Management Service information. Mean river flows are data from the UK National River Flow Archive. Bathing water data are © Environment Agency, under the Open Government Licence. Offshore observations are the Met Office's, as republished by NOAA's National Data Buoy Center. Basemap tiles are © [Esri](https://www.esri.com/). [Leaflet](https://leafletjs.com/) is released under the BSD 2-Clause licence.
+The map data is © OpenStreetMap contributors, available under the [Open Database Licence](https://www.openstreetmap.org/copyright). This uses Environment Agency flood and river level data from the real-time data API (Beta), available under the [Open Government Licence](https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/). Storm overflow activity is © South West Water, under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), and the overflow annual returns are © Environment Agency copyright and/or database right, under the Open Government Licence. Weather and river flow forecasts are from [Open-Meteo](https://open-meteo.com/), under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), with river flows generated using Copernicus Emergency Management Service information. Mean river flows are data from the UK National River Flow Archive. Bathing water data are © Environment Agency, under the Open Government Licence. Offshore observations are the Met Office's, as republished by NOAA's National Data Buoy Center. Real time data from the wave buoys and coastal weather stations are from the Regional Coastal Monitoring Programme, made freely available under the terms of the Open Government Licence; they are real-time data and are not quality-controlled. Basemap tiles are © [Esri](https://www.esri.com/). [Leaflet](https://leafletjs.com/) is released under the BSD 2-Clause licence.

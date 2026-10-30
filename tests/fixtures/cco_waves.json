@@ -1,0 +1,191 @@
+{
+ "type": "FeatureCollection",
+ "features": [
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "97",
+    "sensor": "Bideford Bay",
+    "institution": "Southwest Regional Coastal Monitoring Programme; National Network of Regional Coastal Monitoring Programmes",
+    "date": "20261030#133000",
+    "gps_latitude": "51.05784",
+    "gps_longitude": "-4.27763",
+    "hs": "1.720",
+    "hmax": "2.780",
+    "sst": "15.150",
+    "type": "waves",
+    "value": "279.800",
+    "tp": "10.530",
+    "tz": "9.0910",
+    "pdir": "279.800",
+    "spread": "8.200",
+    "te": "11.000",
+    "power": "15.910",
+    "QCflag": null
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -4.27683,
+     51.05816
+    ]
+   },
+   "id": "waves.97"
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "http://wavenet.cefas.co.uk/Map?ZoomTo=-6.5453%2C49.8168 ",
+    "sensor": "Isles of Scilly",
+    "institution": "This record is external to NNRCMP and included as a reference to a site hosted elsewhere",
+    "date": null,
+    "gps_latitude": null,
+    "gps_longitude": null,
+    "hs": null,
+    "hmax": null,
+    "sst": null,
+    "type": "waves",
+    "value": null,
+    "tp": null,
+    "tz": null,
+    "pdir": null,
+    "spread": null,
+    "te": null,
+    "power": null,
+    "QCflag": null
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -6.5453333333,
+     49.8168333333
+    ]
+   },
+   "id": "waves.http://wavenet.cefas.co.uk/Map?ZoomTo=-6.5453%2C49.8168 "
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "98",
+    "sensor": "Looe Bay",
+    "institution": "Southwest Regional Coastal Monitoring Programme; National Network of Regional Coastal Monitoring Programmes",
+    "date": "20261030#140000",
+    "gps_latitude": "50.33881",
+    "gps_longitude": "-4.41155",
+    "hs": "0.920",
+    "hmax": "1.420",
+    "sst": "15.000",
+    "type": "waves",
+    "value": "140.600",
+    "tp": "4.350",
+    "tz": "3.6040",
+    "pdir": "140.600",
+    "spread": "25.600",
+    "te": "4.600",
+    "power": "1.890",
+    "QCflag": null
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -4.41083,
+     50.33866
+    ]
+   },
+   "id": "waves.98"
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "76",
+    "sensor": "Perranporth",
+    "institution": "Southwest Regional Coastal Monitoring Programme; National Network of Regional Coastal Monitoring Programmes",
+    "date": "20261030#143000",
+    "gps_latitude": "50.35316",
+    "gps_longitude": "-5.17542",
+    "hs": "1.310",
+    "hmax": "2.100",
+    "sst": "14.450",
+    "type": "waves",
+    "value": "282.700",
+    "tp": "14.290",
+    "tz": "7.5470",
+    "pdir": "282.700",
+    "spread": "21.800",
+    "te": "11.200",
+    "power": "9.420",
+    "QCflag": null
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -5.17496,
+     50.35323
+    ]
+   },
+   "id": "waves.76"
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "102",
+    "sensor": "Port Isaac",
+    "institution": "Southwest Regional Coastal Monitoring Programme; National Network of Regional Coastal Monitoring Programmes",
+    "date": "20261023#100000",
+    "gps_latitude": null,
+    "gps_longitude": null,
+    "hs": "1.339",
+    "hmax": "3.000",
+    "sst": null,
+    "type": "waves",
+    "value": null,
+    "tp": "4.270",
+    "tz": "3.4300",
+    "pdir": null,
+    "spread": null,
+    "te": null,
+    "power": null,
+    "QCflag": null
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -4.83438,
+     50.59418
+    ]
+   },
+   "id": "waves.102"
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "116",
+    "sensor": "Wave Hub",
+    "institution": "Southwest Regional Coastal Monitoring Programme; National Network of Regional Coastal Monitoring Programmes",
+    "date": "20181231#233000",
+    "gps_latitude": null,
+    "gps_longitude": null,
+    "hs": null,
+    "hmax": null,
+    "sst": null,
+    "type": "waves",
+    "value": null,
+    "tp": null,
+    "tz": null,
+    "pdir": null,
+    "spread": null,
+    "te": null,
+    "power": null,
+    "QCflag": "9"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -5.61417,
+     50.34723
+    ]
+   },
+   "id": "waves.116"
+  }
+ ]
+}

@@ -653,7 +653,8 @@ const StationPopup = (() => {
     const rows = [];
     if (s.wvht != null) {
       const period = s.dpd ?? s.apd;
-      rows.push(['Waves', `${one(s.wvht)} m${period != null ? `, every ${Math.round(period)} s` : ''}`]);
+      rows.push(['Waves', `${one(s.wvht)} m${period != null ? `, every ${Math.round(period)} s` : ''}` +
+        `${s.mwd != null ? `, from the ${compass(s.mwd)}` : ''}`]);
     }
     if (s.wspd != null) {
       rows.push(['Wind', `${Math.round(mph(s.wspd))} mph${s.wdir != null ? ` from the ${compass(s.wdir)}` : ''}` +
@@ -665,7 +666,15 @@ const StationPopup = (() => {
     return rows;
   }
 
-  function drawSeries(host, readout, key, data, view) {
+  // What a station is, and whose data it is.
+  function marineKind(s) {
+    if (s.source === 'ndbc') return 'Offshore weather station';
+    const waves = s.wvht != null || s.wtmp != null, met = s.wspd != null || s.pres != null || s.atmp != null;
+    return waves && met ? 'Wave buoy and weather station' : waves ? 'Wave buoy' : 'Weather station';
+  }
+  const MARINE_CREDIT = { ndbc: 'Met Office, via NOAA', cco: 'Regional Coastal Monitoring Programme' };
+
+  function drawSeries(host, readout, key, data, view, credit) {
     host.textContent = '';
     readout.textContent = '';
     const now = Math.floor(Date.now() / 1000);
@@ -673,7 +682,7 @@ const StationPopup = (() => {
     const col = data.fields.indexOf(view.field) + 1;
     const conv = view.conv || (v => v);
     const points = data.readings.filter(r => r[col] != null && r[0] > from).map(r => [r[0], conv(r[col])]);
-    key.textContent = `${view.caption} · Met Office, via NOAA`;
+    key.textContent = `${view.caption} · ${credit}`;
     if (!points.length) {
       host.textContent = 'No readings in this period.';
       return;
@@ -719,7 +728,7 @@ const StationPopup = (() => {
   function marineContent(s) {
     const box = node('div', 'stn-pop');
     box.appendChild(node('div', 'stn-pop-title', s.name));
-    box.appendChild(node('div', 'stn-pop-sub', 'Offshore weather station'));
+    box.appendChild(node('div', 'stn-pop-sub', marineKind(s)));
     const state = node('div', `stn-pop-state is-${s.state === 'live' ? 'normal' : s.state}`);
     state.appendChild(node('span', 'stn-pop-dot'));
     state.appendChild(document.createTextNode(s.state === 'no-data' ? 'No readings yet'
@@ -743,7 +752,7 @@ const StationPopup = (() => {
       let current = views[0];
       const render = () => data.then(d => {
         chartHost.classList.remove('loading');
-        drawSeries(chartHost, readout, key, d, current);
+        drawSeries(chartHost, readout, key, d, current, MARINE_CREDIT[s.source] || '');
       }).catch(() => {
         chartHost.classList.remove('loading');
         chartHost.textContent = 'History is unavailable right now.';
@@ -760,7 +769,9 @@ const StationPopup = (() => {
       }
       render();
     }
-    box.appendChild(node('div', 'stn-pop-source', `Met Office station ${s.id}, via NOAA’s National Data Buoy Center`));
+    box.appendChild(node('div', 'stn-pop-source', s.source === 'cco'
+      ? 'Regional Coastal Monitoring Programme. Real-time data, not quality-controlled.'
+      : `Met Office station ${s.id}, via NOAA’s National Data Buoy Center`));
     return box;
   }
 
@@ -892,6 +903,6 @@ const StationPopup = (() => {
     openBathing, bathingSummary, openMarine, marineSummary,
     // The chart arithmetic and formatting, for tests/js.
     _internals: { niceTicks, niceScale, levelAxis, timeTicks, tickLabel, rainBuckets, fmtValue, fmtFlow,
-      fmtCount, compass, marineRows, sampleBand, BACTERIA },
+      fmtCount, compass, marineRows, marineKind, sampleBand, BACTERIA },
   };
 })();

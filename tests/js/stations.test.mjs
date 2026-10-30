@@ -124,3 +124,12 @@ test('bathing samples are judged against the coastal standards', () => {
   assert.equal(sampleBand(186, entero), 'poor');
   assert.equal(sampleBand(null, entero), null);
 });
+
+test('coastal stations say what they are and where the waves come from', () => {
+  const { marineKind, marineRows } = StationPopup._internals;
+  assert.equal(marineKind({ source: 'ndbc', wvht: 1.9 }), 'Offshore weather station');
+  assert.equal(marineKind({ source: 'cco', wvht: 0.9, wspd: 5.8 }), 'Wave buoy and weather station');
+  assert.equal(marineKind({ source: 'cco', wvht: 1.1, wtmp: 14 }), 'Wave buoy');
+  assert.equal(marineKind({ source: 'cco', wspd: 3, pres: 1024 }), 'Weather station');
+  assert.deepEqual(plain(marineRows({ wvht: 1.31, dpd: 14.29, mwd: 282.7 })), [['Waves', '1.3 m, every 14 s, from the WNW']]);
+});
