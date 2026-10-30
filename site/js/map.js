@@ -567,6 +567,7 @@ const CornwallMap = (() => {
           Layers<span class="legend-chevron" aria-hidden="true"></span>
         </button>
         <div class="legend-body" id="legend-body">
+        <div class="legend-col">
         ${title('floods', 'Flood warnings')}
         ${item('floods', 'area flood-swatch', '--flood-warning', 'Warning and alert areas', '<span class="count" id="legend-count-floods"></span>')}
         ${title('live', 'Live readings')}
@@ -577,6 +578,8 @@ const CornwallMap = (() => {
         ${item('csoNow', 'cso-swatch is-spilling', '--cso', 'Spilling now', '<span class="count" id="legend-count-csoNow"></span>')}
         ${item('csoRecent', 'cso-swatch is-recent', '--cso-recent', 'Spilled in last 48 h', '<span class="count" id="legend-count-csoRecent"></span>')}
         ${item('csoQuiet', 'cso-swatch is-quiet', '--cso-quiet', 'Quiet or offline', '<span class="count"><span id="legend-cso-quiet-hint">zoom in · </span><span id="legend-count-csoQuiet"></span></span>')}
+        </div>
+        <div class="legend-col">
         ${title('waterways', 'Waterways')}
         ${item('rivers', 'line', '--water', 'Rivers', '<span class="count" id="legend-count-rivers"></span>')}
         ${item('streams', 'line thin', '--water-minor', 'Streams', '<span class="count" id="legend-streams-hint"></span>')}
@@ -588,6 +591,7 @@ const CornwallMap = (() => {
         ${item('roads', 'road', '--road', 'Major roads')}
         <div class="legend-title">Boundary</div>
         ${item('boundary', 'area', '--accent', 'Cornwall')}
+        </div>
         </div>`;
       L.DomEvent.disableClickPropagation(div);
       L.DomEvent.disableScrollPropagation(div);

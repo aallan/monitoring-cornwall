@@ -302,7 +302,7 @@ body.map-mode footer { display: none; }
    zoom buttons above; the list scrolls inside the card when it doesn't fit. */
 .map-legend {
     background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius);
-    padding: 0.6rem 0.75rem 0.5rem; min-width: 190px; color: var(--text);
+    padding: 0.6rem 0.75rem 0.5rem; color: var(--text);
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
     display: flex; flex-direction: column; max-height: var(--legend-max, none);
 }
@@ -318,7 +318,14 @@ body.map-mode footer { display: none; }
 .map-legend.collapsed .legend-head { padding-bottom: 0; gap: 0.6rem; }
 .map-legend.collapsed .legend-chevron::after { content: '\25B8'; }
 .map-legend.collapsed .legend-body { display: none; }
-.legend-body { border-top: 1px solid var(--border); padding-top: 0.15rem; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+/* Two columns, so the legend is wider and shorter; it scrolls only when even
+   two columns don't fit. One column on phones. */
+.legend-body {
+    border-top: 1px solid var(--border); padding-top: 0.15rem; min-height: 0;
+    overflow-y: auto; overscroll-behavior: contain;
+    display: grid; grid-template-columns: minmax(175px, auto) minmax(150px, auto); column-gap: 1.1rem;
+}
+.legend-col { min-width: 0; }
 .legend-title {
     font-size: 0.7rem; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.04em;
     margin: 0.35rem 0 0.2rem;
@@ -375,7 +382,10 @@ footer { width: 100%; padding: 0 2rem 1.5rem; }
     header, main, footer { padding-left: 1rem; padding-right: 1rem; }
     main { padding-top: 1rem; }
     .map-box { min-height: 70vh; }
-    .map-legend { min-width: 0; font-size: 0.75rem; }
+    .map-legend { font-size: 0.75rem; }
+    .legend-body { grid-template-columns: minmax(175px, auto); }
+    /* The credits wrap to two lines across a phone's width; keep the legend above them */
+    .leaflet-bottom.leaflet-left .leaflet-control { margin-bottom: 36px; }
     .data-table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
     .footer-content { flex-direction: column; align-items: flex-start; gap: 0.35rem; }
 }
