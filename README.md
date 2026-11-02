@@ -1,6 +1,6 @@
 # Monitoring Cornwall
 
-![Monitoring Cornwall: the map of Cornwall with its river gauges, rain gauges, storm overflows, bathing waters and buoys, the layers legend open, and the Seven Stones lightvessel's popup charting a week of wave height](docs/screenshot.webp)
+![Monitoring Cornwall: the map of Cornwall with its river gauges, rain gauges, storm overflows, bathing waters, buoys and power cuts, the layers legend open, and the Seven Stones lightvessel's popup charting a week of wave height](docs/screenshot.webp)
 
 Monitoring Cornwall shows which of the county's rivers are high and rising, which storm overflows are spilling, how clean the water is at each beach, and what the rain, the rivers and the sea are doing now and are forecast to do next. It brings the Environment Agency's gauges, flood warnings and bathing waters, the Met Office's weather warnings, National Grid Electricity Distribution's power cuts, South West Water's storm overflow monitors, the Regional Coastal Monitoring Programme's wave buoys and coastal weather stations, the Met Office's observations at sea, and Open-Meteo's forecasts together on one map of Cornwall, drawn from [OpenStreetMap](https://www.openstreetmap.org/). It runs at [cornwall.watch](https://cornwall.watch), a companion to [Floodwatch](https://github.com/aallan/floodwatch), which monitors the River Taw catchment in Devon at [tawriver.watch](https://tawriver.watch).
 
