@@ -220,7 +220,7 @@ So where the flow is measured, the forecast is scaled by the ratio of the measur
 
 ## How the map loads
 
-The map opens on mainland Cornwall and the Isles of Scilly at the closest zoom that shows both. The legend can sit over open sea and over a small corner of the mainland, usually the Rame peninsula, but not over Scilly or the rest of the county. On a phone, where both won't fit, it opens on the mainland. Each layer of the map draws as soon as its file arrives, without waiting for the others. Streams, the largest overlay, load the first time the map is zoomed in far enough to show them.
+The map opens on mainland Cornwall and the Isles of Scilly at the closest zoom that shows both. The legend can sit over open sea and over a small corner of the mainland, usually the Rame peninsula, but not over Scilly or the rest of the county. Where both won't fit at zoom 9 or closer, on a phone or in a smaller window, it opens on the mainland alone, at the closest zoom that shows it. Each layer of the map draws as soon as its file arrives, without waiting for the others. Streams, the largest overlay, load the first time the map is zoomed in far enough to show them.
 
 ## How the overlays are built
 

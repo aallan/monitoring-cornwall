@@ -844,6 +844,7 @@ const CornwallMap = (() => {
   // Scilly. At each zoom the placement covering least is used, the most
   // central of those.
   const LEGEND_POINTS = 3;
+  const SCILLY_MIN_ZOOM = 9;
   const LEGEND_DEPTH = 0.1;
   function openingView(mainland, islands, size, hard, soft, minZoom, maxZoom) {
     const M = 12;
@@ -896,10 +897,11 @@ const CornwallMap = (() => {
     const c = map.getContainer();
     const hard = [...c.querySelectorAll('.map-legend.collapsed, .leaflet-control-zoom, .leaflet-control-attribution')].map(rect);
     const soft = [...c.querySelectorAll('.map-legend:not(.collapsed)')].map(rect);
-    // Scilly too where everything fits, as on most screens; on a phone, the
-    // mainland filling the screen rather than both, small.
+    // Scilly too where everything fits at zoom 9 or closer, as on most
+    // screens. Below that the county is too small to read, so on a phone or a
+    // smaller window, the mainland alone, larger.
     const size = map.getSize(), min = map.getMinZoom();
-    const view = openingView(MAINLAND, SCILLY, size, hard, soft, min, 11)
+    const view = openingView(MAINLAND, SCILLY, size, hard, soft, Math.max(min, SCILLY_MIN_ZOOM), 11)
       || openingView(MAINLAND, [], size, hard, soft, min, 11)
       || openingView(MAINLAND, [], size, [], [], min, 11);
     // The panning limit is set after the opening view, and takes it in, so it
