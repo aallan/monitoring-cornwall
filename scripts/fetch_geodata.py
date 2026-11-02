@@ -12,9 +12,9 @@ Queries the Overpass API and writes simplified GeoJSON overlays to site/data/:
     meta.json          when the snapshot was taken, and feature counts
 
 and, for the server only, data/places.json (the county's towns, villages and
-hamlets, used to name rain gauges) and data/neighbours.geojson (Devon and
-Plymouth, used to place offshore storm overflows on the right side of the
-Tamar).
+hamlets, used to name rain gauges and power cuts) and data/neighbours.geojson
+(Devon and Plymouth, used to place offshore storm overflows, power cuts and
+sea stations on the right side of the Tamar).
 
 Standard library only. Run occasionally (``make data``; add ``--refresh`` to bypass the cache, or
 ``--cached`` to reprocess the cached downloads without fetching); the overlays change

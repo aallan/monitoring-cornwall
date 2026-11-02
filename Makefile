@@ -8,7 +8,7 @@ LEAFLET := 1.9.4
 help:
 	@echo "make libs    download Leaflet $(LEAFLET) into site/lib and verify it"
 	@echo "make data    build the map overlays in site/data from OpenStreetMap"
-	@echo "make poll    fetch the latest Environment Agency readings once"
+	@echo "make poll    run one poll of every feed, without the server"
 	@echo "make serve   run the server, which also polls every 5 minutes"
 	@echo "make test    run the Python and JavaScript tests (needs Node 22 or later)"
 	@echo "make og      redraw the link preview image (needs Google Chrome and make data)"

@@ -32,7 +32,7 @@ Then open [http://localhost:8090](http://localhost:8090). The first poll for liv
    - Anything from the data or the user goes through `esc()` before it reaches `innerHTML`.
    - Event handlers are attached with `addEventListener`. The Content Security Policy blocks inline handlers such as `onclick=`.
    - Copy and comments are in British English.
-3. Run `make test`, and add a test for anything you fix or add in `monitor/`, `serve.py` or the chart code in `site/js/stations.js`. Tests stay offline, with fixed responses in place of network calls, as the existing tests do.
+3. Run `make test`, and add a test for anything you fix or add in `monitor/`, `serve.py`, the chart code in `site/js/stations.js` or the popup wording in `site/js/powercuts.js`. Tests stay offline, with fixed responses in place of network calls, as the existing tests do.
 4. Check the change in a browser at desktop and phone widths, in light and dark mode. If it touches `scripts/fetch_geodata.py`, run `make data` and look at the result on the map.
 5. When a change alters a JavaScript or CSS file, bump its `?v=` query string in `site/index.html`, so browsers fetch the new version.
 6. Open a pull request against `main` that says what changed and why.
