@@ -6,7 +6,9 @@
 // to the report. A drought lasts months, so this stays out of the map's way.
 
 const Drought = (() => {
-  const REFRESH_MS = 60 * 60 * 1000;
+  // Checked as often as the other feeds: the file is small, and a page opened
+  // while the server is starting up finds it within minutes.
+  const REFRESH_MS = 5 * 60 * 1000;
   const CLASS = { 'Severe drought': 'severe', Drought: 'drought', 'Prolonged dry weather': 'dry', Recovery: 'recovery' };
   const ORDER = Object.keys(CLASS);
 
