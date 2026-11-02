@@ -789,10 +789,11 @@ const CornwallMap = (() => {
     setTiles();
 
     addLegend();
+    fitLegend();     // places the legend, before the view is fitted around it
     fitIfVisible();  // after the legend, which it fits around
     legendReady = true;
-    fitLegend();
     map.on('resize', fitLegend);
+    if (document.fonts) document.fonts.ready.then(fitLegend);  // the credits rewrap once fonts load
     drawFloods();
     map.on('zoomend', () => { loadStreamsIfNeeded(); sizeMarkers(); updateVisibility(); restylers.forEach(fn => fn()); });
     sizeMarkers();
@@ -922,10 +923,22 @@ const CornwallMap = (() => {
   // the zoom control and the margins around both.
   // Keep the legend inside the map: no taller than the map, less the margins
   // and, on the left, the zoom buttons above it.
+  // On phones the legend sits at the bottom left, and the credits wrap across
+  // the map's width beneath it, to as many lines as they need; the legend
+  // sits just above them, however many that is.
   function fitLegend() {
     const legend = map && map.getContainer().querySelector('.map-legend');
     if (!legend) return;
-    const clearance = legend.closest('.leaflet-left') ? 100 : 30;
+    let clearance = 30;
+    if (legend.closest('.leaflet-left')) {
+      const box = map.getContainer().getBoundingClientRect();
+      const credits = map.getContainer().querySelector('.leaflet-control-attribution');
+      const zoom = map.getContainer().querySelector('.leaflet-control-zoom');
+      const above = Math.ceil(credits ? credits.getBoundingClientRect().height : 0) + 8;
+      const below = Math.ceil(zoom ? zoom.getBoundingClientRect().bottom - box.top : 0) + 8;
+      legend.style.marginBottom = `${above}px`;
+      clearance = above + below;
+    }
     legend.style.setProperty('--legend-max', `${Math.max(120, map.getSize().y - clearance)}px`);
   }
 

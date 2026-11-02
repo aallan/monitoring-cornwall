@@ -456,7 +456,8 @@ footer { width: 100%; padding: 0 2rem 1.5rem; }
     .map-box { min-height: 70vh; }
     .map-legend { font-size: 0.75rem; }
     .legend-body { grid-template-columns: 1fr; }
-    /* The credits wrap to two lines across a phone's width; keep the legend above them */
+    /* The credits wrap across a phone's width; fitLegend() in map.js measures
+       them and lifts the legend clear. This is the starting point. */
     .leaflet-bottom.leaflet-left .leaflet-control { margin-bottom: 36px; }
     .data-table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
     .footer-content { flex-direction: column; align-items: flex-start; gap: 0.35rem; }
