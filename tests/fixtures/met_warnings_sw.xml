@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Met Office Warnings for South West England</title>
+    <link>https://www.metoffice.gov.uk/weather/warnings-and-advice/uk-warnings</link>
+    <description>Weather warnings of severe and extreme weather from the Met Office</description>
+    <language>en-gb</language>
+    <item>
+      <title>Yellow warning of rain affecting South West England</title>
+      <link>https://www.metoffice.gov.uk/weather/warnings-and-advice/uk-warnings#?date=2024-02-22&amp;id=11111111-1111-1111-1111-111111111111&amp;referrer=rss</link>
+      <description>Yellow warning of rain affecting South West England: Bath and North East Somerset, Bournemouth Christchurch and Poole, Bristol, Dorset, Gloucestershire, North Somerset, Somerset, South Gloucestershire, Swindon, Wiltshire valid from 0500 Thu 22 Feb to 1800 Thu 22 Feb</description>
+      <pubDate>Wed, 21 Feb 2024 10:44:56 GMT</pubDate>
+      <guid isPermaLink="false">11111111-1111-1111-1111-111111111111</guid>
+      <enclosure url="https://data.consumer-digital.api.metoffice.gov.uk/v1/warnings/rss/image/yellow-rain.png" length="5000" type="image/png"/>
+    </item>
+    <item>
+      <title>Yellow warning of wind affecting South West England</title>
+      <link>https://www.metoffice.gov.uk/weather/warnings-and-advice/uk-warnings#?date=2024-02-22&amp;id=22222222-2222-2222-2222-222222222222&amp;referrer=rss</link>
+      <description>Yellow warning of wind affecting South West England: Bournemouth Christchurch and Poole, Dorset, Wiltshire valid from 0800 Thu 22 Feb to 1800 Thu 22 Feb</description>
+      <pubDate>Wed, 21 Feb 2024 10:51:12 GMT</pubDate>
+      <guid isPermaLink="false">22222222-2222-2222-2222-222222222222</guid>
+      <enclosure url="https://data.consumer-digital.api.metoffice.gov.uk/v1/warnings/rss/image/yellow-wind.png" length="5000" type="image/png"/>
+    </item>
+    <item>
+      <title>Yellow warning of rain affecting South West England</title>
+      <link>https://www.metoffice.gov.uk/weather/warnings-and-advice/uk-warnings#?date=2024-02-22&amp;id=33333333-3333-3333-3333-333333333333&amp;referrer=rss</link>
+      <description>Yellow warning of rain affecting South West England: Bournemouth Christchurch and Poole, Cornwall, Devon, Dorset, Gloucestershire, North Somerset, Plymouth, Somerset, South Gloucestershire, Torbay valid from 0300 Thu 22 Feb to 1400 Thu 22 Feb</description>
+      <pubDate>Wed, 21 Feb 2024 11:02:40 GMT</pubDate>
+      <guid isPermaLink="false">33333333-3333-3333-3333-333333333333</guid>
+      <enclosure url="https://data.consumer-digital.api.metoffice.gov.uk/v1/warnings/rss/image/yellow-rain.png" length="5000" type="image/png"/>
+    </item>
+    <item>
+      <title>Amber warning of wind affecting South West England</title>
+      <link>https://www.metoffice.gov.uk/weather/warnings-and-advice/uk-warnings#?date=2024-02-22&amp;id=44444444-4444-4444-4444-444444444444&amp;referrer=rss</link>
+      <description>Amber warning of wind affecting South West England: Cornwall, Isles of Scilly valid from 1200 Thu 22 Feb to 2100 Thu 22 Feb</description>
+      <pubDate>Wed, 21 Feb 2024 15:30:00 GMT</pubDate>
+      <guid isPermaLink="false">44444444-4444-4444-4444-444444444444</guid>
+      <enclosure url="https://data.consumer-digital.api.metoffice.gov.uk/v1/warnings/rss/image/amber-wind.png" length="5000" type="image/png"/>
+    </item>
+  </channel>
+</rss>

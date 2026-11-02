@@ -49,4 +49,5 @@ document.addEventListener('DOMContentLoaded', () => {
   route();
   loadMeta();
   FloodWarnings.init();
+  WeatherWarnings.init();
 });

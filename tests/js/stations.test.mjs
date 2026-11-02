@@ -142,3 +142,14 @@ test('tide times show the day only when it is not today', () => {
   assert.deepEqual(plain(tideRows([[utc(2026, 9, 30, 20, 9), 'high', 7.076], [utc(2026, 9, 31, 2, 24), 'low', 1.764]], now)),
     [['High water', '20:09, 7.1 m'], ['Low water', 'Sat 02:24, 1.8 m']]);
 });
+
+test('measured flow is averaged by day, for days with enough readings', () => {
+  const { dailyMeans } = StationPopup._internals;
+  const day = utc(2026, 10, 1);
+  const full = Array.from({ length: 96 }, (_, i) => [day + i * 900, i < 48 ? 2 : 4]);
+  const sparse = Array.from({ length: 10 }, (_, i) => [day + 86400 + i * 900, 9]);
+  const means = dailyMeans([...full, ...sparse], [[day, 1], [day + 86400, 1], [day + 2 * 86400, 1]]);
+  assert.equal(means.get(day), 3);
+  assert.equal(means.has(day + 86400), false);   // ten readings aren't a day
+  assert.equal(means.has(day + 2 * 86400), false);
+});

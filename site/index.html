@@ -21,7 +21,7 @@
   <meta name="twitter:image" content="https://cornwall.watch/img/og-image.png">
   <link rel="icon" type="image/svg+xml" href="img/favicon.svg?v=1">
   <link rel="stylesheet" href="lib/leaflet/leaflet.css?v=1.9.4">
-  <link rel="stylesheet" href="css/style.css?v=35">
+  <link rel="stylesheet" href="css/style.css?v=36">
   <script src="js/utils.js?v=2"></script>
 </head>
 <body>
@@ -43,6 +43,12 @@
       <span class="flood-icon" aria-hidden="true"></span><span class="flood-summary-text"></span><span class="flood-chevron" aria-hidden="true"></span>
     </button>
     <div id="flood-details" class="flood-details" hidden></div>
+  </div>
+  <div id="weather-banner" class="flood-banner" hidden>
+    <button type="button" class="flood-summary" aria-expanded="false" aria-controls="weather-details">
+      <span class="flood-icon" aria-hidden="true"></span><span class="flood-summary-text"></span><span class="flood-chevron" aria-hidden="true"></span>
+    </button>
+    <div id="weather-details" class="flood-details" hidden></div>
   </div>
 </header>
 
@@ -69,11 +75,16 @@
           <dt>Flood warnings</dt>
           <dd>The Environment Agency's flood warnings and alerts in force in Cornwall, outlined on the map, with a
             banner across the top of the page while any are in force.</dd>
+          <dt>Weather warnings</dt>
+          <dd>The Met Office's yellow, amber and red warnings of severe weather that name Cornwall or the Isles of
+            Scilly, in a banner of the warning's colour while any are in force. Each one opens to show the Met
+            Office's own description of it, and links to it on the Met Office site.</dd>
           <dt>Rivers and rain</dt>
           <dd>About 130 river level, tidal and rain gauges, reporting every 15 minutes. River gauges are green
             within their typical range and red above it, with an arrow while the level is rising or falling. Rain
             gauges have a 48-hour rain forecast, and the gauges on the Tamar, Lynher, Fowey and Camel a
-            fortnight's river flow forecast.</dd>
+            fortnight's river flow forecast, set against the flow measured at the river's gauging station over the past
+            week where the station measures it.</dd>
           <dt>Storm overflows</dt>
           <dd>Nearly 400 storm overflows run by South West Water in Cornwall, which release storm sewage into rivers
             and the sea when heavy rain overloads the sewers. The map opens on those spilling now, and each one's popup shows
@@ -98,9 +109,11 @@
           <thead><tr><th>Layer</th><th>Source</th><th>Licence</th></tr></thead>
           <tbody>
             <tr><td>Flood warnings and alerts</td><td>Environment Agency real-time flood-monitoring API, checked every 5 minutes, with flood area outlines from the same API</td><td><a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/" rel="noopener">Open Government Licence</a></td></tr>
+            <tr><td>Weather warnings</td><td>Met Office <a href="https://weather.metoffice.gov.uk/warnings-and-advice/uk-warnings" rel="noopener">weather warnings</a> for South West England, from its RSS feed, checked every 5 minutes. Contains public sector information licensed under the Open Government Licence v3.0.</td><td><a href="https://www.metoffice.gov.uk/policies/tandc" rel="noopener">Met Office terms</a></td></tr>
             <tr><td>River, tidal and rain gauges</td><td>Environment Agency real-time flood-monitoring API, checked every 5 minutes. This uses Environment Agency flood and river level data from the real-time data API (Beta).</td><td><a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/" rel="noopener">Open Government Licence</a></td></tr>
             <tr><td>Rain forecast</td><td><a href="https://open-meteo.com/" rel="noopener">Open-Meteo</a> weather forecast API, hourly rainfall for the next 48 hours at each rain gauge, fetched when a forecast is opened and kept for 15 minutes</td><td><a href="https://creativecommons.org/licenses/by/4.0/" rel="noopener">CC BY 4.0</a></td></tr>
             <tr><td>River flow forecast</td><td>GloFAS river discharge from the Copernicus Emergency Management Service, through <a href="https://open-meteo.com/en/docs/flood-api" rel="noopener">Open-Meteo's flood API</a>, for the Tamar, Lynher, Fowey and Camel. GloFAS models rivers on a grid about 5 km across, so its flows are scaled to match each river's long-run mean flow, and its forecasts are a guide to the days ahead rather than a measurement.</td><td><a href="https://creativecommons.org/licenses/by/4.0/" rel="noopener">CC BY 4.0</a></td></tr>
+            <tr><td>Measured river flow</td><td>Environment Agency <a href="https://environment.data.gov.uk/hydrology/doc/reference" rel="noopener">Hydrology API</a>, a reading every 15 minutes at the gauging stations on the Tamar, Lynher and Fowey, fetched when a flow forecast is opened and kept for 15 minutes. Recent readings are provisional.</td><td><a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/" rel="noopener">Open Government Licence</a></td></tr>
             <tr><td>Mean river flows</td><td>Data from the UK National River Flow Archive, used to scale the modelled flows</td><td><a href="https://nrfa.ceh.ac.uk/help/costs-terms-and-conditions" rel="noopener">NRFA terms</a></td></tr>
             <tr><td>Storm overflows</td><td>South West Water's storm overflow activity feed, checked every 5 minutes</td><td><a href="https://creativecommons.org/licenses/by/4.0/" rel="noopener">CC BY 4.0</a></td></tr>
             <tr><td>Storm overflow yearly totals</td><td>Event Duration Monitoring annual returns. © Environment Agency copyright and/or database right.</td><td><a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/" rel="noopener">Open Government Licence</a></td></tr>
@@ -143,9 +156,10 @@
 </footer>
 
 <script src="lib/leaflet/leaflet.js?v=1.9.4"></script>
-<script src="js/stations.js?v=15"></script>
-<script src="js/map.js?v=41"></script>
+<script src="js/stations.js?v=16"></script>
+<script src="js/map.js?v=42"></script>
 <script src="js/floods.js?v=2"></script>
-<script src="js/app.js?v=8"></script>
+<script src="js/weather.js?v=1"></script>
+<script src="js/app.js?v=9"></script>
 </body>
 </html>

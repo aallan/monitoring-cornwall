@@ -309,8 +309,21 @@ const StationPopup = (() => {
   const fmtFlowNum = v => Number(v).toLocaleString('en-GB', { maximumFractionDigits: v < 10 ? 1 : 0 });
   const fmtFlow = v => `${fmtFlowNum(v)} m³/s`;
 
-  // Daily modelled flow: the past week in blue, the fortnight ahead in amber
-  // with the spread of the forecast ensemble, against normal and high flow.
+  // The mean of the measured flow on each day, keyed by the day's start, for
+  // days with at least half their readings.
+  function dailyMeans(measured, days) {
+    const means = new Map();
+    for (const [start] of days) {
+      const v = measured.filter(r => r[0] >= start && r[0] < start + 86400).map(r => r[1]);
+      if (v.length >= 48) means.set(start, v.reduce((a, b) => a + b, 0) / v.length);
+    }
+    return means;
+  }
+
+  // Daily modelled flow, the fortnight ahead in amber with the spread of the
+  // forecast ensemble, against normal and high flow. The past week shows the
+  // flow measured at the gauge, with the model's flow for the same days
+  // fainter behind it, or the model's alone where the flow isn't measured.
   function drawFlow(host, readout, key, d) {
     host.textContent = '';
     readout.textContent = '';
@@ -320,15 +333,20 @@ const StationPopup = (() => {
       key.textContent = '';
       return;
     }
-    key.textContent = `Daily flow modelled by GloFAS, scaled to NRFA gauge ${d.nrfa}. ` +
-      `Dashed line: high flow, ${fmtFlow(d.high)} · dotted: normal, ${fmtFlow(d.normal)}`;
     const now = Math.floor(Date.now() / 1000);
     const from = days[0][0], to = days[days.length - 1][0] + 86400;
+    const measured = (d.measured || []).filter(r => r[0] >= from && r[0] <= now);
+    const hasMeasured = measured.length > 1;
+    const means = dailyMeans(measured, days);
+    key.textContent = (hasMeasured
+      ? `Blue: flow measured at NRFA gauge ${d.nrfa}, provisional. Faint blue and amber: daily flow modelled by GloFAS, scaled to that gauge's mean. `
+      : `Daily flow modelled by GloFAS, scaled to NRFA gauge ${d.nrfa}. `) +
+      `Dashed line: high flow, ${fmtFlow(d.high)} · dotted: normal, ${fmtFlow(d.normal)}`;
     const svg = el('svg', { viewBox: `0 0 ${W} ${H}`, class: 'stn-chart', role: 'img',
-      'aria-label': `${d.river}: modelled flow for the past week and the next fortnight` });
+      'aria-label': `${d.river}: ${hasMeasured ? 'measured and ' : ''}modelled flow for the past week, and the forecast for the next fortnight` });
     host.appendChild(svg);
     const x = t => M.l + (t - from) / (to - from) * (W - M.l - M.r);
-    const axis = niceScale(0, Math.max(d.high * 1.15, ...days.map(r => r[3] ?? r[1])));
+    const axis = niceScale(0, Math.max(d.high * 1.15, ...days.map(r => r[3] ?? r[1]), ...measured.map(r => r[1])));
     const y = v => M.t + (1 - (v - axis.lo) / (axis.hi - axis.lo)) * (H - M.t - M.b);
 
     for (const v of axis.ticks) {
@@ -358,8 +376,13 @@ const StationPopup = (() => {
       if (rows.length > 1) el('path', { d: 'M' + rows.map(r => `${mid(r).toFixed(1)},${y(r[1]).toFixed(1)}`).join('L'), class: cls }, svg);
     };
     // The past line runs on into today, so the two halves join.
-    line(ahead.length ? [...past, ahead[0]] : past, 'stn-line stn-line-level');
+    line(ahead.length ? [...past, ahead[0]] : past, hasMeasured ? 'stn-line stn-line-model' : 'stn-line stn-line-level');
     line(ahead, 'stn-line stn-line-forecast');
+    if (hasMeasured) {
+      // A gap of more than an hour in the readings is left as a gap in the line.
+      const d0 = measured.map((r, i) => `${i && r[0] - measured[i - 1][0] <= 3600 ? 'L' : 'M'}${x(r[0]).toFixed(1)},${y(r[1]).toFixed(1)}`).join('');
+      el('path', { d: d0, class: 'stn-line stn-line-level' }, svg);
+    }
     if (now > from && now < to) {
       el('line', { x1: x(now), x2: x(now), y1: M.t, y2: H - M.b, class: 'stn-today' }, svg);
       el('text', { x: x(now) + 3, y: M.t + 8, class: 'stn-today-label' }, svg).textContent = 'Today';
@@ -376,7 +399,10 @@ const StationPopup = (() => {
       cursor.setAttribute('visibility', 'visible');
       const day = new Date(r[0] * 1000).toLocaleDateString('en-GB', { timeZone: TZ, weekday: 'short', day: 'numeric', month: 'short' });
       const range = r[2] != null && r[3] != null && r[3] - r[2] >= 0.05 ? `, range ${fmtFlowNum(r[2])}–${fmtFlow(r[3])}` : '';
-      readout.textContent = `${day} · ${fmtFlow(r[1])}${r[0] + 86400 > now ? ' forecast' : ''}${range}`;
+      const mean = means.get(r[0]);
+      readout.textContent = r[0] + 86400 > now ? `${day} · ${fmtFlow(r[1])} forecast${range}`
+        : mean != null ? `${day} · ${fmtFlow(mean)} measured, ${fmtFlow(r[1])} modelled`
+          : `${day} · ${fmtFlow(r[1])}${hasMeasured ? ' modelled' : ''}`;
     });
     svg.addEventListener('mouseleave', () => { cursor.setAttribute('visibility', 'hidden'); readout.textContent = ''; });
   }
@@ -926,6 +952,6 @@ const StationPopup = (() => {
     openBathing, bathingSummary, openMarine, marineSummary,
     // The chart arithmetic and formatting, for tests/js.
     _internals: { niceTicks, niceScale, levelAxis, timeTicks, tickLabel, rainBuckets, fmtValue, fmtFlow,
-      fmtCount, compass, marineRows, marineKind, sampleBand, BACTERIA, fmtTideTime, tideRows },
+      dailyMeans, fmtCount, compass, marineRows, marineKind, sampleBand, BACTERIA, fmtTideTime, tideRows },
   };
 })();

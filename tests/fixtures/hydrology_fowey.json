@@ -1,0 +1,64 @@
+{
+ "meta": {
+  "publisher": "Environment Agency",
+  "license": "http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/",
+  "licenseName": "OGL 3",
+  "comment": "Hydrology API for sub-daily data",
+  "version": "2.1.1"
+ },
+ "items": [
+  {
+   "measure": {
+    "@id": "http://environment.data.gov.uk/hydrology/id/measures/a91dfed0-9614-4cf3-ba5a-d1a17c8c7282-flow-i-900-m3s-qualified"
+   },
+   "date": "2026-11-01",
+   "dateTime": "2026-11-01T00:00:00",
+   "value": 3.075,
+   "quality": "Unchecked"
+  },
+  {
+   "measure": {
+    "@id": "http://environment.data.gov.uk/hydrology/id/measures/a91dfed0-9614-4cf3-ba5a-d1a17c8c7282-flow-i-900-m3s-qualified"
+   },
+   "date": "2026-11-01",
+   "dateTime": "2026-11-01T00:15:00",
+   "value": 3.051,
+   "quality": "Unchecked"
+  },
+  {
+   "measure": {
+    "@id": "http://environment.data.gov.uk/hydrology/id/measures/a91dfed0-9614-4cf3-ba5a-d1a17c8c7282-flow-i-900-m3s-qualified"
+   },
+   "date": "2026-11-01",
+   "dateTime": "2026-11-01T00:30:00",
+   "value": 3.027,
+   "quality": "Unchecked"
+  },
+  {
+   "measure": {
+    "@id": "http://environment.data.gov.uk/hydrology/id/measures/a91dfed0-9614-4cf3-ba5a-d1a17c8c7282-flow-i-900-m3s-qualified"
+   },
+   "date": "2026-11-01",
+   "dateTime": "2026-11-01T00:45:00",
+   "value": 3.124,
+   "quality": "Unchecked"
+  },
+  {
+   "measure": {
+    "@id": "http://environment.data.gov.uk/hydrology/id/measures/a91dfed0-9614-4cf3-ba5a-d1a17c8c7282-flow-i-900-m3s-qualified"
+   },
+   "date": "2026-11-01",
+   "dateTime": "2026-11-01T01:00:00",
+   "value": 2.98,
+   "quality": "Suspect"
+  },
+  {
+   "measure": {
+    "@id": "http://environment.data.gov.uk/hydrology/id/measures/a91dfed0-9614-4cf3-ba5a-d1a17c8c7282-flow-i-900-m3s-qualified"
+   },
+   "date": "2026-11-01",
+   "dateTime": "2026-11-01T01:15:00",
+   "quality": "Missing"
+  }
+ ]
+}

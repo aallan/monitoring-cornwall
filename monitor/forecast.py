@@ -8,7 +8,10 @@ repeated popups don't repeat the request.
 """
 
 import time
+from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 
+from . import ea
 from .cache import cached, get_json
 from .geo import in_region
 
@@ -57,16 +60,25 @@ def rain(lat, lon):
 # "Normal" is that mean; "high" is the scaled model Q10. The model smooths
 # peaks, so its own Q10 is a fairer mark for its forecasts than the gauged one.
 #
+# The flow measured at the same gauging station, every 15 minutes, comes from
+# the Environment Agency's Hydrology API; "hydrology" is the station's
+# identifier there. Denby's flow measurement is suspended, and the API returns
+# no readings for it.
+#
 # Keyed by the Environment Agency level gauge whose popup shows the forecast.
 FLOW_OUTLETS = {
     "47117": {"river": "River Tamar", "nrfa": "47001", "nrfa_name": "Tamar at Gunnislake",
-              "cell": (50.525, -4.275), "model_mean": 11.28, "model_q10": 26.35},
+              "cell": (50.525, -4.275), "model_mean": 11.28, "model_q10": 26.35,
+              "hydrology": "575d64ff-3205-4213-abe9-ed455d9bc49f"},
     "47136": {"river": "River Lynher", "nrfa": "47004", "nrfa_name": "Lynher at Pillaton Mill",
-              "cell": (50.375, -4.275), "model_mean": 4.38, "model_q10": 8.16},
+              "cell": (50.375, -4.275), "model_mean": 4.38, "model_q10": 8.16,
+              "hydrology": "817d17c7-3e01-4bc9-a7b3-8e2a5c6d0e5b"},
     "49110": {"river": "River Fowey", "nrfa": "48011", "nrfa_name": "Fowey at Restormel",
-              "cell": (50.375, -4.675), "model_mean": 4.52, "model_q10": 8.33},
+              "cell": (50.375, -4.675), "model_mean": 4.52, "model_q10": 8.33,
+              "hydrology": "a91dfed0-9614-4cf3-ba5a-d1a17c8c7282"},
     "49133": {"river": "River Camel", "nrfa": "49001", "nrfa_name": "Camel at Denby",
-              "cell": (50.525, -4.875), "model_mean": 5.24, "model_q10": 9.62},
+              "cell": (50.525, -4.875), "model_mean": 5.24, "model_q10": 9.62,
+              "hydrology": "a987b813-6ebb-44f8-bf5c-658a6a3762a5"},
 }
 
 FLOW_PAST_DAYS = 7
@@ -74,6 +86,10 @@ FLOW_FORECAST_DAYS = 14
 
 NRFA_URL = "https://nrfaapps.ceh.ac.uk/nrfa/ws/station-info"
 NRFA_TTL = 7 * 86400  # the NRFA's API licence allows temporary caching only
+
+HYDROLOGY_URL = "https://environment.data.gov.uk/hydrology/id/measures/{}-flow-i-900-m3s-qualified/readings.json"
+MEASURED_TTL = 15 * 60  # a reading every 15 minutes, published within the hour
+UK = ZoneInfo("Europe/London")
 
 
 def gauged_mean(nrfa_id):
@@ -88,11 +104,37 @@ def gauged_mean(nrfa_id):
     return cached(("nrfa", nrfa_id), NRFA_TTL, fetch)
 
 
+def measured(station_id, today=None):
+    """Flow measured every 15 minutes since the start of the chart's first
+    day, as [[ts, m³/s], ...]. Recent readings are provisional; any the
+    Agency has marked suspect are left out. The API gives times in UTC
+    without saying so."""
+    o = FLOW_OUTLETS[station_id]
+
+    def fetch():
+        # The API returns readings after min-date, not on it, and a UK day in
+        # summer starts at 23:00 UTC the day before, so ask from two days early.
+        start = (today or datetime.now(UK).date()) - timedelta(days=FLOW_PAST_DAYS + 2)
+        d = _get(HYDROLOGY_URL.format(o["hydrology"]), {"min-date": start.isoformat(), "_limit": 2000})
+        rows = []
+        for r in d.get("items", []):
+            v = r.get("value")
+            if v is None or r.get("quality") == "Suspect":
+                continue
+            t = datetime.fromisoformat(r["dateTime"].replace("Z", "+00:00"))
+            if t.tzinfo is None:
+                t = t.replace(tzinfo=timezone.utc)
+            rows.append([int(t.timestamp()), round(float(v), 3)])
+        return sorted(rows)
+
+    return cached(("measured", station_id), MEASURED_TTL, fetch)
+
+
 def flow(station_id):
     """Daily river flow for the past week and the next fortnight, in m³/s:
-    {"days": [[ts, mean, min, max], ...], "normal", "high", ...}. Days are UK
-    days, each timestamp the UK midnight it starts at; min and max span the
-    forecast ensemble."""
+    {"days": [[ts, mean, min, max], ...], "normal", "high", "measured", ...}.
+    Days are UK days, each timestamp the UK midnight it starts at; min and max
+    span the forecast ensemble. "measured" is the gauged flow, from measured()."""
     o = FLOW_OUTLETS[station_id]
 
     def fetch():
@@ -116,4 +158,12 @@ def flow(station_id):
             "normal": round(normal, 2), "high": round(o["model_q10"] * scale, 2),
         }
 
-    return cached(("flow", station_id), FLOW_TTL, fetch)
+    d = dict(cached(("flow", station_id), FLOW_TTL, fetch))
+    # The model is the forecast; the measured flow only adds to it, so the
+    # chart still draws when the Hydrology API doesn't answer.
+    try:
+        d["measured"] = measured(station_id)
+    except Exception as e:  # noqa: BLE001
+        ea.log(f"measured flow for {station_id} unavailable: {e}")
+        d["measured"] = None
+    return d

@@ -50,6 +50,10 @@
     --flood-severe: #c4564a;
     --flood-warning: #d9822b;
     --flood-alert: #c9a227;
+    /* Met Office warning levels */
+    --met-yellow: #e0b400;
+    --met-amber: #e07b00;
+    --met-red: #c8322b;
     --station-fill: #ffffff;
     --hollow-fill: #fcf8ef;  /* hollow markers show the county's land colour */
     --mask: #d9d5cd;
@@ -100,6 +104,9 @@
         --flood-severe: #e07b6f;
         --flood-warning: #e39a52;
         --flood-alert: #d9bd4f;
+        --met-yellow: #e8c23a;
+        --met-amber: #e8962e;
+        --met-red: #e0675c;
         --station-fill: #262522;
         --hollow-fill: #4d4b49;
         --mask: #0e0d0c;
@@ -149,6 +156,9 @@
     --flood-severe: #e07b6f;
     --flood-warning: #e39a52;
     --flood-alert: #d9bd4f;
+    --met-yellow: #e8c23a;
+    --met-amber: #e8962e;
+    --met-red: #e0675c;
     --station-fill: #262522;
     --hollow-fill: #4d4b49;
     --mask: #0e0d0c;
@@ -514,6 +524,7 @@ footer { width: 100%; padding: 0 2rem 1.5rem; }
 .stn-bar { fill: var(--rain); }
 .stn-bar-forecast { fill: var(--tidal); }  /* amber for forecasts, as on Floodwatch */
 .stn-line-forecast { stroke: var(--tidal); }
+.stn-line-model { stroke: var(--water); opacity: 0.45; stroke-dasharray: 4 3; }
 .stn-band { fill: var(--tidal); opacity: 0.2; }
 .stn-ref-normal { stroke: var(--text-tertiary); stroke-dasharray: 1 3; }
 .stn-today { stroke: var(--text-secondary); stroke-width: 1; stroke-dasharray: 3 2; }
@@ -619,6 +630,17 @@ footer { width: 100%; padding: 0 2rem 1.5rem; }
 .flood-show { margin-top: 0.5rem; padding: 0.2rem 0.6rem; font-size: 0.75rem; border-radius: 6px; }
 .flood-item-source { font-size: 0.68rem; color: var(--text-tertiary); margin-top: 0.35rem; }
 .stn-popup .flood-item-message { max-height: 14rem; overflow-y: auto; }
+
+/* Met Office weather warnings: the flood banner's layout, in the warning's colour */
+.flood-banner.is-yellow { --tone: var(--met-yellow); }
+.flood-banner.is-amber { --tone: var(--met-amber); }
+.flood-banner.is-red { --tone: var(--met-red); }
+.flood-banner.is-red .flood-icon { animation: pill-pulse 1.8s ease-in-out infinite; }
+.flood-item.is-yellow .flood-chip { background: var(--met-yellow); color: #2d2b28; }
+.flood-item.is-amber .flood-chip { background: var(--met-amber); }
+.flood-item.is-red .flood-chip { background: var(--met-red); }
+.weather-link { display: inline-block; margin-top: 0.4rem; font-size: 0.8rem; color: var(--accent); text-decoration: none; }
+.weather-link:hover { text-decoration: underline; }
 
 .swatch.flood-swatch::before { background: color-mix(in srgb, var(--c) 30%, transparent); border-color: var(--c); }
 
