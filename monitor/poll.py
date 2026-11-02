@@ -11,7 +11,7 @@ import argparse
 import threading
 import time
 
-from . import bathing, db, ea, floods, live, marine, overflows, weather
+from . import bathing, db, ea, floods, live, marine, overflows, powercuts, weather
 
 # Stations report every 15 minutes but not in step, and the EA publishes each
 # reading some minutes after it is taken, so polling more often than the
@@ -35,6 +35,7 @@ def cycle():
         gaps = None
         for name, poll in (("gauge", poll_gauges), ("overflow", poll_overflows),
                            ("flood warning", poll_floods), ("weather warning", poll_weather),
+                           ("power cut", poll_powercuts),
                            ("bathing water", poll_bathing),
                            ("offshore station", poll_marine)):
             try:
@@ -93,6 +94,12 @@ def poll_weather(con, fresh=False):
     """The Met Office feed is a few hundred bytes, so it's read every cycle."""
     warnings = weather.poll()
     ea.log(f"weather warnings: {len(warnings)} for Cornwall")
+
+
+def poll_powercuts(con, fresh=False):
+    """NGED's file of live power cuts is a few kilobytes, so it's read every cycle."""
+    cuts = powercuts.poll()
+    ea.log(f"power cuts: {len(cuts)} in Cornwall, {sum(c['off'] for c in cuts)} customers off")
 
 
 def poll_overflows(con, fresh=False):

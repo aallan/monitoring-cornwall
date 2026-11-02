@@ -32,6 +32,7 @@ class Cycle(QuietTestCase):
                 mock.patch.object(poll, "poll_overflows", side_effect=step("overflows")), \
                 mock.patch.object(poll, "poll_floods", side_effect=step("floods")), \
                 mock.patch.object(poll, "poll_weather", side_effect=step("weather")), \
+                mock.patch.object(poll, "poll_powercuts", side_effect=step("power")), \
                 mock.patch.object(poll, "poll_bathing", side_effect=step("bathing")), \
                 mock.patch.object(poll, "poll_marine", side_effect=step("marine")), \
                 mock.patch.object(poll, "fill_gauge_gaps", side_effect=step("fill")):
@@ -39,22 +40,22 @@ class Cycle(QuietTestCase):
         return order
 
     def test_filling_gauge_history_comes_last(self):
-        self.assertEqual(self.run_cycle(), ["gauges", "overflows", "floods", "weather", "bathing", "marine", "fill"])
+        self.assertEqual(self.run_cycle(), ["gauges", "overflows", "floods", "weather", "power", "bathing", "marine", "fill"])
 
     def test_a_failing_feed_doesnt_stop_the_others(self):
         order = self.run_cycle(overflows=TimeoutError("no complete answer within 120 s"))
-        self.assertEqual(order, ["gauges", "overflows", "floods", "weather", "bathing", "marine", "fill"])
+        self.assertEqual(order, ["gauges", "overflows", "floods", "weather", "power", "bathing", "marine", "fill"])
 
     def test_the_first_cycle_reads_every_feed_afresh(self):
         first, second = [], []
         self.run_cycle(fresh=first)
         self.run_cycle(fresh=second)
-        self.assertEqual(first, [True] * 6)
-        self.assertEqual(second, [False] * 6)
+        self.assertEqual(first, [True] * 7)
+        self.assertEqual(second, [False] * 7)
 
     def test_no_history_fill_when_the_gauges_failed(self):
         order = self.run_cycle(gauges=TimeoutError("timed out"))
-        self.assertEqual(order, ["gauges", "overflows", "floods", "weather", "bathing", "marine"])
+        self.assertEqual(order, ["gauges", "overflows", "floods", "weather", "power", "bathing", "marine"])
 
 
 

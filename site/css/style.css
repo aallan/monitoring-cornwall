@@ -54,6 +54,8 @@
     --met-yellow: #e0b400;
     --met-amber: #e07b00;
     --met-red: #c8322b;
+    --power-bg: #2d2b28;
+    --power-bolt: #f5c400;
     --station-fill: #ffffff;
     --hollow-fill: #fcf8ef;  /* hollow markers show the county's land colour */
     --mask: #d9d5cd;
@@ -107,6 +109,8 @@
         --met-yellow: #e8c23a;
         --met-amber: #e8962e;
         --met-red: #e0675c;
+        --power-bg: #f5c400;
+        --power-bolt: #1f1e1c;
         --station-fill: #262522;
         --hollow-fill: #4d4b49;
         --mask: #0e0d0c;
@@ -159,6 +163,8 @@
     --met-yellow: #e8c23a;
     --met-amber: #e8962e;
     --met-red: #e0675c;
+    --power-bg: #f5c400;
+    --power-bolt: #1f1e1c;
     --station-fill: #262522;
     --hollow-fill: #4d4b49;
     --mask: #0e0d0c;
@@ -462,6 +468,25 @@ footer { width: 100%; padding: 0 2rem 1.5rem; }
 .leaflet-marker-icon:hover .cso, .leaflet-marker-icon:focus .cso,
 .leaflet-marker-icon:hover .bw, .leaflet-marker-icon:focus .bw,
 .leaflet-marker-icon:hover .buoy, .leaflet-marker-icon:focus .buoy { --hover: 1.25; }
+
+/* ---------- Power cuts ---------- */
+/* A dark disc with a yellow bolt, reversed in dark mode */
+.pcut {
+    position: absolute; left: 50%; top: 50%; box-sizing: border-box;
+    width: calc(var(--size) * var(--mk, 1)); height: calc(var(--size) * var(--mk, 1));
+    transform: translate(-50%, -50%) scale(var(--hover, 1));
+    border-radius: 50%; background: var(--power-bg); border: 1.5px solid var(--station-fill);
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.25); cursor: pointer; transition: transform 0.15s;
+    display: flex; align-items: center; justify-content: center;
+}
+.pcut svg { width: 64%; height: 64%; fill: var(--power-bolt); }
+.leaflet-marker-icon:hover .pcut, .leaflet-marker-icon:focus .pcut { --hover: 1.2; }
+.swatch.pcut-swatch::before { left: 5px; right: auto; width: 11px; height: 11px; border-radius: 50%; background: var(--power-bg); }
+.legend-item.off .swatch.pcut-swatch::before { opacity: 0.3; }
+.stn-pop-state.is-power .stn-pop-dot { background: var(--power-bg); box-shadow: inset 0 0 0 2px var(--power-bolt); }
+.pcut-postcodes { font-size: 0.78rem; color: var(--text-secondary); margin: 0.25rem 0; }
+.pcut-postcodes summary { cursor: pointer; }
+.pcut-postcode-list { margin-top: 0.25rem; line-height: 1.5; font-variant-numeric: tabular-nums; }
 .stn { --size: 14px; }
 .stn-level { border-radius: 50%; background: var(--level-normal); }
 .stn-level.is-high { background: var(--level-high); }

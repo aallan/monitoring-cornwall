@@ -61,12 +61,14 @@ const CornwallMap = (() => {
     csoRecent: { on: false },
     csoQuiet:  { on: false },
     floods:    { on: true },
+    powercuts: { on: true },
     bathing:   { on: true },
     offshore:  { on: true },
   };
   // Legend sections whose heading switches the whole group.
   const GROUPS = {
     floods: ['floods'],
+    power: ['powercuts'],
     live: ['levels', 'tidal', 'rain'],
     overflows: ['csoNow', 'csoRecent', 'csoQuiet'],
     waterways: ['rivers', 'streams'],
@@ -558,6 +560,37 @@ const CornwallMap = (() => {
       .catch(e => console.warn('No offshore station data:', e));
   }
 
+  // ---------------------------------------------------------------- power cuts
+  // NGED's live power cuts in Cornwall: a dark disc with a bolt, larger for
+  // more customers off.
+  const powerGroup = L.layerGroup();
+  let powerRegistered = false;
+  const BOLT = '<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M7.2 0.6 2.4 7h3.1l-0.9 4.4L9.6 5H6.4z"/></svg>';
+
+  function renderPowerCuts(data) {
+    if (!powerRegistered) { addPart(powerGroup, 'powercuts', Z.markers); powerRegistered = true; }
+    powerGroup.clearLayers();
+    const cuts = data.power_cuts || [];
+    for (const c of cuts) {
+      const size = Math.round(16 + Math.min(10, Math.sqrt(c.off)));
+      const icon = L.divIcon({
+        className: '', iconSize: [size, size], iconAnchor: [size / 2, size / 2],
+        html: `<span class="pcut" style="--size: ${size}px">${BOLT}</span>`,
+      });
+      L.marker([c.lat, c.lon], { icon, title: PowerCuts.title(c), riseOnHover: true, zIndexOffset: 400 })
+        .bindTooltip(tip(PowerCuts.title(c), PowerCuts.summary(c)), { ...TIP_OPTS, sticky: false, offset: [0, -10] })
+        .on('click', () => PowerCuts.open(map, c, data.updated))
+        .addTo(powerGroup);
+    }
+    setCount('powercuts', cuts.length);
+  }
+
+  function loadPowerCuts() {
+    return getJSON(DATA + 'powercuts.json')
+      .then(d => { renderPowerCuts(d); updateVisibility(); })
+      .catch(e => console.warn('No power cut data:', e));
+  }
+
   function loadLive() {
     return getJSON(DATA + 'live.json')
       .then(live => { renderLive(live); updateVisibility(); })
@@ -653,6 +686,8 @@ const CornwallMap = (() => {
         <div class="legend-col">
         ${title('floods', 'Flood warnings')}
         ${item('floods', 'area flood-swatch', '--flood-warning', 'Warning and alert areas', '<span class="count" id="legend-count-floods"></span>')}
+        ${title('power', 'Power cuts')}
+        ${item('powercuts', 'pcut-swatch', '--power-bg', 'Live power cuts', '<span class="count" id="legend-count-powercuts"></span>')}
         ${title('live', 'Live readings')}
         ${item('levels', 'gauge level', '--level-normal', 'River levels', '<span class="count" id="legend-count-levels"></span>')}
         ${item('tidal', 'gauge tidal', '--tidal', 'Tidal levels', '<span class="count" id="legend-count-tidal"></span>')}
@@ -668,8 +703,6 @@ const CornwallMap = (() => {
         ${item('csoQuiet', 'cso-swatch is-quiet', '--cso-quiet', 'Quiet or offline', '<span class="count"><span id="legend-cso-quiet-hint">zoom in · </span><span id="legend-count-csoQuiet"></span></span>')}
         <div class="legend-key"><span class="works-key"></span>at a treatment works</div>
         <div class="legend-key"><span class="works-key is-network"></span>on the sewer network</div>
-        <div class="legend-title">Boundary</div>
-        ${item('boundary', 'area', '--accent', 'Cornwall')}
         </div>
         <div class="legend-col">
         ${title('waterways', 'Waterways')}
@@ -687,6 +720,8 @@ const CornwallMap = (() => {
         ${item('stations', 'dot', '--rail', 'Stations', '<span class="count" id="legend-count-stations"></span>')}
         ${title('roads', 'Roads')}
         ${item('roads', 'road', '--road', 'Major roads')}
+        <div class="legend-title">Boundary</div>
+        ${item('boundary', 'area', '--accent', 'Cornwall')}
         </div>
         </div>`;
       syncLegend(div);
@@ -747,6 +782,7 @@ const CornwallMap = (() => {
     map.attributionControl.addAttribution('Readings: <a href="https://environment.data.gov.uk/flood-monitoring/doc/reference">Environment Agency</a>');
     map.attributionControl.addAttribution('Overflows: <a href="https://www.arcgis.com/home/item.html?id=cabfce76b72a4a278a33d737c0708d42">South West Water</a>');
     map.attributionControl.addAttribution('Forecasts: <a href="https://open-meteo.com/">Open-Meteo</a>, <a href="https://nrfa.ceh.ac.uk/">NRFA</a>');
+    map.attributionControl.addAttribution('Power cuts: Supported by <a href="https://connecteddata.nationalgrid.co.uk/dataset/live-power-cuts">NGED Open Data</a>');
     map.attributionControl.addAttribution('Sea: <a href="https://www.metoffice.gov.uk/">Met Office</a> via <a href="https://www.ndbc.noaa.gov/">NOAA</a>, <a href="https://coastalmonitoring.org/">Coastal Monitoring</a>');
     map.setView([50.45, -4.95], 9, { animate: false });  // placeholder until the container has a size
     makePanes();
@@ -766,7 +802,8 @@ const CornwallMap = (() => {
     loadLive();
     loadOverflows();
     loadCoast();
-    setInterval(() => { loadLive(); loadOverflows(); loadCoast(); }, LIVE_REFRESH_MS);
+    loadPowerCuts();
+    setInterval(() => { loadLive(); loadOverflows(); loadCoast(); loadPowerCuts(); }, LIVE_REFRESH_MS);
     const layer = (name, add) => getJSON(DATA + name)
       .then(fc => { add(fc); updateVisibility(); })
       .catch(e => console.warn(e));

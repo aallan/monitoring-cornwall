@@ -21,7 +21,7 @@
   <meta name="twitter:image" content="https://cornwall.watch/img/og-image.png">
   <link rel="icon" type="image/svg+xml" href="img/favicon.svg?v=1">
   <link rel="stylesheet" href="lib/leaflet/leaflet.css?v=1.9.4">
-  <link rel="stylesheet" href="css/style.css?v=36">
+  <link rel="stylesheet" href="css/style.css?v=37">
   <script src="js/utils.js?v=2"></script>
 </head>
 <body>
@@ -62,8 +62,8 @@
       <h2>About</h2>
       <div class="panel">
         <p>Monitoring Cornwall shows which of the county's rivers are high and rising, which storm overflows are
-          spilling, how clean the water is at each beach, and what the rain and the rivers are forecast to do
-          next. All of it is public data, published by the
+          spilling, how clean the water is at each beach, where the power is off, and what the rain and the rivers
+          are forecast to do next. All of it is public data, published by the
           Environment Agency, South West Water, the Met Office and others on their own sites; here it's on one
           map, and most of it is checked every five minutes.</p>
       </div>
@@ -79,6 +79,9 @@
           <dd>The Met Office's yellow, amber and red warnings of severe weather that name Cornwall or the Isles of
             Scilly, in a banner of the warning's colour while any are in force. Each one opens to show the Met
             Office's own description of it, and links to it on the Met Office site.</dd>
+          <dt>Power cuts</dt>
+          <dd>National Grid Electricity Distribution's power cuts in Cornwall, each with the customers off, the
+            postcodes affected and when power is expected back on. To report a power cut, call 105.</dd>
           <dt>Rivers and rain</dt>
           <dd>About 130 river level, tidal and rain gauges, reporting every 15 minutes. River gauges are green
             within their typical range and red above it, with an arrow while the level is rising or falling. Rain
@@ -110,6 +113,7 @@
           <tbody>
             <tr><td>Flood warnings and alerts</td><td>Environment Agency real-time flood-monitoring API, checked every 5 minutes, with flood area outlines from the same API</td><td><a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/" rel="noopener">Open Government Licence</a></td></tr>
             <tr><td>Weather warnings</td><td>Met Office <a href="https://weather.metoffice.gov.uk/warnings-and-advice/uk-warnings" rel="noopener">weather warnings</a> for South West England, from its RSS feed, checked every 5 minutes. Contains public sector information licensed under the Open Government Licence v3.0.</td><td><a href="https://www.metoffice.gov.uk/policies/tandc" rel="noopener">Met Office terms</a></td></tr>
+            <tr><td>Power cuts</td><td>National Grid Electricity Distribution's <a href="https://connecteddata.nationalgrid.co.uk/dataset/live-power-cuts" rel="noopener">live power cuts</a>, checked every 5 minutes. Supported by NGED Open Data.</td><td><a href="https://www.nationalgrid.co.uk/open-data-licence" rel="noopener">NGED Open Data Licence</a></td></tr>
             <tr><td>River, tidal and rain gauges</td><td>Environment Agency real-time flood-monitoring API, checked every 5 minutes. This uses Environment Agency flood and river level data from the real-time data API (Beta).</td><td><a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/" rel="noopener">Open Government Licence</a></td></tr>
             <tr><td>Rain forecast</td><td><a href="https://open-meteo.com/" rel="noopener">Open-Meteo</a> weather forecast API, hourly rainfall for the next 48 hours at each rain gauge, fetched when a forecast is opened and kept for 15 minutes</td><td><a href="https://creativecommons.org/licenses/by/4.0/" rel="noopener">CC BY 4.0</a></td></tr>
             <tr><td>River flow forecast</td><td>GloFAS river discharge from the Copernicus Emergency Management Service, through <a href="https://open-meteo.com/en/docs/flood-api" rel="noopener">Open-Meteo's flood API</a>, for the Tamar, Lynher, Fowey and Camel. GloFAS models rivers on a grid about 5 km across, so its flows are scaled to match each river's long-run mean flow, and its forecasts are a guide to the days ahead rather than a measurement.</td><td><a href="https://creativecommons.org/licenses/by/4.0/" rel="noopener">CC BY 4.0</a></td></tr>
@@ -157,7 +161,8 @@
 
 <script src="lib/leaflet/leaflet.js?v=1.9.4"></script>
 <script src="js/stations.js?v=16"></script>
-<script src="js/map.js?v=42"></script>
+<script src="js/powercuts.js?v=1"></script>
+<script src="js/map.js?v=43"></script>
 <script src="js/floods.js?v=2"></script>
 <script src="js/weather.js?v=1"></script>
 <script src="js/app.js?v=9"></script>
