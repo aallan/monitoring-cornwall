@@ -153,3 +153,19 @@ test('measured flow is averaged by day, for days with enough readings', () => {
   assert.equal(means.has(day + 86400), false);   // ten readings aren't a day
   assert.equal(means.has(day + 2 * 86400), false);
 });
+
+test("the forecast's falling flow is scaled, and a rise from rain added at the model's size", () => {
+  const { scaleForecast } = StationPopup._internals;
+  const day = utc(2026, 10, 1);
+  const d = n => day + n * 86400;
+  const days = [[d(0), 2, 2, 2], [d(1), 2, 2, 2], [d(2), 1.5, 1, 2], [d(3), 1, 0.5, 4], [d(4), 3, null, 9]];
+  const now = d(1) + 3600;               // early on the second day
+  assert.deepEqual(plain(scaleForecast(days, 6, now)), [
+    [d(0), 2, 2, 2],                     // the past is the model's
+    [d(1), 12, 12, 12],                  // today, scaled in full
+    [d(2), 9, 6, 12],                    // still falling, scaled in full
+    [d(3), 6, 3, 14],                    // the top rises by 2 above its lowest, 2: 12 + 2
+    [d(4), 8, null, 19],                 // the middle rises 2 above its lowest, 1: 6 + 2
+  ]);
+  assert.equal(scaleForecast(days, 1, now), days);
+});

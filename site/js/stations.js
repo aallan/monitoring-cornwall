@@ -320,10 +320,32 @@ const StationPopup = (() => {
     return means;
   }
 
+  // The forecast days, from today on, scaled to start from the measured flow;
+  // past days stay as they are. The model's error is mostly in the river's
+  // falling flow between storms, where measured over modelled flow holds
+  // steady from day to day, while it gets the size of a rise from rain about
+  // right. So each series' lowest point so far, from today, is multiplied by
+  // k, and anything above it, a rise from rain, is added at the model's size.
+  function scaleForecast(days, k, now) {
+    if (k === 1) return days;
+    const base = [null, null, null, null];
+    return days.map(r => {
+      if (r[0] + 86400 <= now) return r;
+      const out = [r[0]];
+      for (let i = 1; i <= 3; i++) {
+        if (r[i] == null) { out.push(r[i]); continue; }
+        base[i] = base[i] == null ? r[i] : Math.min(base[i], r[i]);
+        out.push(k * base[i] + (r[i] - base[i]));
+      }
+      return out;
+    });
+  }
+
   // Daily modelled flow, the fortnight ahead in amber with the spread of the
   // forecast ensemble, against normal and high flow. The past week shows the
   // flow measured at the gauge, with the model's flow for the same days
   // fainter behind it, or the model's alone where the flow isn't measured.
+  // Where the flow is measured, the forecast is scaled to start from it.
   function drawFlow(host, readout, key, d) {
     host.textContent = '';
     readout.textContent = '';
@@ -338,15 +360,21 @@ const StationPopup = (() => {
     const measured = (d.measured || []).filter(r => r[0] >= from && r[0] <= now);
     const hasMeasured = measured.length > 1;
     const means = dailyMeans(measured, days);
-    key.textContent = (hasMeasured
-      ? `Blue: flow measured at NRFA gauge ${d.nrfa}, provisional. Faint blue and amber: daily flow modelled by GloFAS, scaled to that gauge's mean. `
-      : `Daily flow modelled by GloFAS, scaled to NRFA gauge ${d.nrfa}. `) +
+    const k = hasMeasured && d.anchor && d.anchor.ratio > 0 ? d.anchor.ratio : 1;
+    const ratio = k.toLocaleString('en-GB', { maximumFractionDigits: 1 });
+    key.textContent = (k !== 1
+      ? `Blue: flow measured at NRFA gauge ${d.nrfa}, provisional. Amber: the GloFAS forecast, its falling flow multiplied by ${ratio} ` +
+        'to start from the measured flow, with any rise from rain added at the model\'s own size. Faint blue: the model\'s own flow. '
+      : hasMeasured
+        ? `Blue: flow measured at NRFA gauge ${d.nrfa}, provisional. Faint blue and amber: daily flow modelled by GloFAS, scaled to that gauge's mean. `
+        : `Daily flow modelled by GloFAS, scaled to NRFA gauge ${d.nrfa}. `) +
       `Dashed line: high flow, ${fmtFlow(d.high)} · dotted: normal, ${fmtFlow(d.normal)}`;
+    const shown = scaleForecast(days, k, now);
     const svg = el('svg', { viewBox: `0 0 ${W} ${H}`, class: 'stn-chart', role: 'img',
       'aria-label': `${d.river}: ${hasMeasured ? 'measured and ' : ''}modelled flow for the past week, and the forecast for the next fortnight` });
     host.appendChild(svg);
     const x = t => M.l + (t - from) / (to - from) * (W - M.l - M.r);
-    const axis = niceScale(0, Math.max(d.high * 1.15, ...days.map(r => r[3] ?? r[1]), ...measured.map(r => r[1])));
+    const axis = niceScale(0, Math.max(d.high * 1.15, ...shown.map(r => r[3] ?? r[1]), ...measured.map(r => r[1])));
     const y = v => M.t + (1 - (v - axis.lo) / (axis.hi - axis.lo)) * (H - M.t - M.b);
 
     for (const v of axis.ticks) {
@@ -364,8 +392,8 @@ const StationPopup = (() => {
 
     // Each day is plotted at its middle. The forecast starts with today.
     const mid = r => x(r[0] + 43200);
-    const ahead = days.filter(r => r[0] + 86400 > now);
-    const past = days.filter(r => r[0] + 86400 <= now);
+    const ahead = shown.filter(r => r[0] + 86400 > now);
+    const past = shown.filter(r => r[0] + 86400 <= now);
     const spread = ahead.filter(r => r[2] != null && r[3] != null);
     if (spread.length > 1) {
       const top = spread.map(r => `${mid(r).toFixed(1)},${y(r[3]).toFixed(1)}`);
@@ -375,9 +403,20 @@ const StationPopup = (() => {
     const line = (rows, cls) => {
       if (rows.length > 1) el('path', { d: 'M' + rows.map(r => `${mid(r).toFixed(1)},${y(r[1]).toFixed(1)}`).join('L'), class: cls }, svg);
     };
-    // The past line runs on into today, so the two halves join.
-    line(ahead.length ? [...past, ahead[0]] : past, hasMeasured ? 'stn-line stn-line-model' : 'stn-line stn-line-level');
-    line(ahead, 'stn-line stn-line-forecast');
+    if (k !== 1) {
+      // The scaled forecast runs on from the latest measured flow.
+      const last = measured[measured.length - 1];
+      line(past, 'stn-line stn-line-model');
+      const next = ahead.filter(r => r[0] + 43200 > last[0]);
+      if (next.length) {
+        el('path', { d: `M${x(last[0]).toFixed(1)},${y(last[1]).toFixed(1)}` +
+          next.map(r => `L${mid(r).toFixed(1)},${y(r[1]).toFixed(1)}`).join(''), class: 'stn-line stn-line-forecast' }, svg);
+      }
+    } else {
+      // The past line runs on into today, so the two halves join.
+      line(ahead.length ? [...past, ahead[0]] : past, hasMeasured ? 'stn-line stn-line-model' : 'stn-line stn-line-level');
+      line(ahead, 'stn-line stn-line-forecast');
+    }
     if (hasMeasured) {
       // A gap of more than an hour in the readings is left as a gap in the line.
       const d0 = measured.map((r, i) => `${i && r[0] - measured[i - 1][0] <= 3600 ? 'L' : 'M'}${x(r[0]).toFixed(1)},${y(r[1]).toFixed(1)}`).join('');
@@ -392,7 +431,7 @@ const StationPopup = (() => {
     svg.addEventListener('mousemove', e => {
       const box = svg.getBoundingClientRect();
       const t = from + ((e.clientX - box.left) * W / box.width - M.l) / (W - M.l - M.r) * (to - from);
-      const r = days.find(row => t >= row[0] && t < row[0] + 86400);
+      const r = shown.find(row => t >= row[0] && t < row[0] + 86400);
       if (!r) return;
       cursor.setAttribute('x1', mid(r));
       cursor.setAttribute('x2', mid(r));
@@ -952,6 +991,6 @@ const StationPopup = (() => {
     openBathing, bathingSummary, openMarine, marineSummary,
     // The chart arithmetic and formatting, for tests/js.
     _internals: { niceTicks, niceScale, levelAxis, timeTicks, tickLabel, rainBuckets, fmtValue, fmtFlow,
-      dailyMeans, fmtCount, compass, marineRows, marineKind, sampleBand, BACTERIA, fmtTideTime, tideRows },
+      dailyMeans, scaleForecast, fmtCount, compass, marineRows, marineKind, sampleBand, BACTERIA, fmtTideTime, tideRows },
   };
 })();

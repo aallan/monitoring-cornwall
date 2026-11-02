@@ -136,5 +136,54 @@ class Measured(QuietTestCase):
             self.assertRegex(o["hydrology"], r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", sid)
 
 
+class Anchor(unittest.TestCase):
+    DAY = 1793404800  # Sat 31 Oct 2026, 00:00 UTC, which is UK midnight
+
+    def days(self, *model):
+        return [[self.DAY + i * 86400, m, m, m] for i, m in enumerate(model)]
+
+    def readings(self, day, value, n=96):
+        return [[self.DAY + day * 86400 + i * 900, value] for i in range(n)]
+
+    def test_scales_by_the_last_full_day(self):
+        days = self.days(2.0, 2.0, 1.8)          # Sat, Sun, Mon (today)
+        rows = self.readings(0, 13.0) + self.readings(1, 12.0) + self.readings(2, 11.0, n=40)
+        now = self.DAY + 2 * 86400 + 10 * 3600
+        self.assertEqual(forecast.anchor(days, rows, now), {"ratio": 6.0, "day": self.DAY + 86400})
+
+    def test_a_short_day_falls_back_to_the_one_before(self):
+        days = self.days(2.0, 2.0, 1.8)
+        rows = self.readings(0, 8.0) + self.readings(1, 12.0, n=20)
+        now = self.DAY + 2 * 86400 + 3600
+        self.assertEqual(forecast.anchor(days, rows, now)["ratio"], 4.0)
+
+    def test_nothing_recent_enough(self):
+        days = self.days(2.0, 2.0, 2.0, 2.0)
+        rows = self.readings(0, 8.0)             # three days before today
+        self.assertIsNone(forecast.anchor(days, rows, self.DAY + 3 * 86400 + 3600))
+
+    def test_no_measured_flow(self):
+        days = self.days(2.0, 2.0)
+        self.assertIsNone(forecast.anchor(days, None, self.DAY + 86400 + 3600))
+        self.assertIsNone(forecast.anchor(days, [], self.DAY + 86400 + 3600))
+
+    def test_an_implausible_ratio_isnt_used(self):
+        days = self.days(0.01, 2.0)
+        rows = self.readings(0, 8.0)
+        self.assertIsNone(forecast.anchor(days, rows, self.DAY + 86400 + 3600))
+
+    def test_flow_includes_the_anchor(self):
+        model = {"daily": {"time": [self.DAY, self.DAY + 86400], "river_discharge_mean": [2.0, 1.8],
+                           "river_discharge_min": [2.0, 1.5], "river_discharge_max": [2.0, 2.5]}}
+        with mock.patch.object(forecast, "gauged_mean", return_value=4.52), \
+                mock.patch.object(forecast, "measured", return_value=self.readings(0, 3.0)), \
+                mock.patch.object(forecast, "_get", return_value=model), \
+                mock.patch.object(forecast.time, "time", return_value=self.DAY + 86400 + 3600):
+            d = forecast.flow("49110")
+        scale = 4.52 / forecast.FLOW_OUTLETS["49110"]["model_mean"]
+        self.assertAlmostEqual(d["anchor"]["ratio"], 3.0 / round(2.0 * scale, 2), places=3)
+        self.assertEqual(d["days"][0][1], round(2.0 * scale, 2))   # the days stay the model's
+
+
 if __name__ == "__main__":
     unittest.main()

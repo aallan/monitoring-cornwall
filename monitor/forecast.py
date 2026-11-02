@@ -130,11 +130,41 @@ def measured(station_id, today=None):
     return cached(("measured", station_id), MEASURED_TTL, fetch)
 
 
+# GloFAS can run well short of a Cornish river after rain, and its forecast
+# carries on from wherever the model is rather than from the river. So the
+# forecast is scaled by the ratio of measured to modelled flow on the last
+# full day with enough readings, and the model supplies only its shape: how
+# the river rises and falls from here. A day older than ANCHOR_DAYS is too
+# stale to scale by, and a ratio outside ANCHOR_RANGE says something is wrong
+# with one side or the other, so neither is used.
+ANCHOR_DAYS = 2
+ANCHOR_RANGE = (0.1, 20)
+ANCHOR_MIN_READINGS = 48  # half a day of 15-minute readings
+
+
+def anchor(days, measured_rows, now=None):
+    """{"ratio", "day"}: measured over modelled flow on the most recent full
+    UK day that has both, or None."""
+    now = int(now or time.time())
+    complete = [r for r in days if r[0] + 86400 <= now][-ANCHOR_DAYS:]
+    for start, model, *_ in reversed(complete):
+        v = [m for t, m in measured_rows or [] if start <= t < start + 86400]
+        if len(v) < ANCHOR_MIN_READINGS or not model or model <= 0:
+            continue
+        ratio = sum(v) / len(v) / model
+        if ANCHOR_RANGE[0] <= ratio <= ANCHOR_RANGE[1]:
+            return {"ratio": round(ratio, 3), "day": start}
+        return None
+    return None
+
+
 def flow(station_id):
     """Daily river flow for the past week and the next fortnight, in m³/s:
     {"days": [[ts, mean, min, max], ...], "normal", "high", "measured", ...}.
     Days are UK days, each timestamp the UK midnight it starts at; min and max
-    span the forecast ensemble. "measured" is the gauged flow, from measured()."""
+    span the forecast ensemble. "measured" is the gauged flow, from measured(),
+    and "anchor" what the forecast is scaled by to start from it, from anchor().
+    The days are the model's own, unscaled."""
     o = FLOW_OUTLETS[station_id]
 
     def fetch():
@@ -166,4 +196,5 @@ def flow(station_id):
     except Exception as e:  # noqa: BLE001
         ea.log(f"measured flow for {station_id} unavailable: {e}")
         d["measured"] = None
+    d["anchor"] = anchor(d["days"], d["measured"])
     return d
