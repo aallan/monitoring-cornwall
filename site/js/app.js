@@ -50,4 +50,5 @@ document.addEventListener('DOMContentLoaded', () => {
   loadMeta();
   FloodWarnings.init();
   WeatherWarnings.init();
+  Drought.init();
 });

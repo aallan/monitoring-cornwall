@@ -6,7 +6,7 @@ Monitoring Cornwall shows which of the county's rivers are high and rising, whic
 
 The site is a single page with no framework and no build step. The server, the poller and the map data pipeline use only the Python standard library, with readings kept in SQLite.
 
-- [What the map shows](#what-the-map-shows): warnings, power cuts, rivers and rain, storm overflows, the coast, and the background layers
+- [What the map shows](#what-the-map-shows): warnings, drought, power cuts, rivers and rain, storm overflows, the coast, and the background layers
 - [Data sources](#data-sources)
 - [Running it](#running-it): locally, and on a server
 - [How it works](#how-it-works): how each feed is collected, how the forecasts are made, and how the map is built
@@ -19,6 +19,10 @@ The site is a single page with no framework and no build step. The server, the p
 Flood warnings and alerts come from the Environment Agency, which issues flood warnings (severe, and ordinary) for specific places, and flood alerts for wider areas. When any are in force in Cornwall, a banner under the header says how many of each; opening it lists them with the Agency's message, and "Show on map" zooms to the area. Each area in force is drawn on the map, red for a severe flood warning, amber for a flood warning and yellow for a flood alert, and clicking it shows the same message. When none are in force, the header says so.
 
 Weather warnings come from the Met Office, which issues yellow, amber and red warnings of rain, wind, snow, ice, fog, thunderstorms and extreme heat. While any that name Cornwall or the Isles of Scilly are in force or due, a second banner, in the colour of the most severe, gives the warning's title, or how many there are; opening it shows each warning's level, when it's in force, the Met Office's description and a link to the warning on the [Met Office site](https://weather.metoffice.gov.uk/warnings-and-advice/uk-warnings). The warnings aren't drawn on the map: the feed names the local authorities each covers but has no outline.
+
+### Drought
+
+Drought status comes from the Environment Agency's weekly [Dry weather and drought in England](https://www.gov.uk/government/publications/dry-weather-and-drought-in-england-2026-summary-reports) report, which puts each of its Areas at a stage of drought response: prolonged dry weather, drought, severe drought or recovery. Cornwall is part of the Devon, Cornwall and Isles of Scilly Area, which can be at two stages at once; in late October 2026 the parts supplied by Stithians and Drift reservoirs were in severe drought and the rest in drought. While Cornwall is at any stage, or South West Water has a hosepipe ban in force, a pill in the header gives the most severe stage, "in parts" when the county is split. Opening it shows each stage as the report words it, the hosepipe ban, and a link to the report. A drought lasts months, so it's a pill rather than a banner, and stays out of the map's way.
 
 ### Power cuts
 
@@ -85,6 +89,7 @@ Every layer is on when the page opens, apart from the storm overflows that aren'
 |---|---|---|---|
 | Flood warnings and alerts, and their areas | Environment Agency [real-time flood-monitoring API](https://environment.data.gov.uk/flood-monitoring/doc/reference) | Every 5 minutes | [Open Government Licence](https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/) |
 | Weather warnings | Met Office [weather warnings](https://weather.metoffice.gov.uk/warnings-and-advice/uk-warnings) RSS feed for South West England | Every 5 minutes | [Met Office terms](https://www.metoffice.gov.uk/policies/tandc) |
+| Drought status and hosepipe bans | Environment Agency's weekly [Dry weather and drought in England](https://www.gov.uk/government/publications/dry-weather-and-drought-in-england-2026-summary-reports) report, through the [GOV.UK Content API](https://content-api.publishing.service.gov.uk/) | Every 6 hours | Open Government Licence |
 | Power cuts | NGED's [live power cuts](https://connecteddata.nationalgrid.co.uk/dataset/live-power-cuts) on its Connected Data portal | Every 5 minutes | [NGED Open Data Licence](https://www.nationalgrid.co.uk/open-data-licence) |
 | River, tidal and rain gauges | Environment Agency real-time flood-monitoring API | Every 5 minutes | Open Government Licence |
 | Storm overflows | South West Water's [storm overflow activity feed](https://www.arcgis.com/home/item.html?id=cabfce76b72a4a278a33d737c0708d42) | Every 5 minutes | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) |
@@ -113,7 +118,7 @@ make data     # build the overlays in site/data
 make serve    # serve the site at http://localhost:8090, polling for readings
 ```
 
-The server's first poll lists the stations and writes their latest readings, so the gauges appear within a minute or two, then reads the overflows, flood warnings, weather warnings, power cuts, bathing waters and sea stations. Last, it fetches 28 days of history for every gauge, four at a time, which takes a few minutes more. Later polls take a few seconds. The coastal stations need an API key; see [Settings](#settings).
+The server's first poll lists the stations and writes their latest readings, so the gauges appear within a minute or two, then reads the overflows, flood warnings, weather warnings, power cuts, drought report, bathing waters and sea stations. Last, it fetches 28 days of history for every gauge, four at a time, which takes a few minutes more. Later polls take a few seconds. The coastal stations need an API key; see [Settings](#settings).
 
 `make data` takes a few minutes on a first run, most of it waiting on the public [Overpass API](https://wiki.openstreetmap.org/wiki/Overpass_API) servers. Raw responses are cached in `.cache/overpass/` for a day, so a second run within that window takes seconds. Two flags change that behaviour:
 
@@ -211,7 +216,7 @@ cd /srv/monitoring-cornwall && runuser -u monitor -- git pull && systemctl resta
 
 ## How it works
 
-`monitor/` holds the server-side code. The poller runs every 5 minutes, reading each feed in turn: the gauges, the storm overflows, the flood warnings, the weather warnings, the power cuts, the bathing waters and the sea stations, then filling any gaps in the gauges' history. The feeds are independent, so a failure in one doesn't stop the others, and every request the poller makes gives up after two minutes, however slowly an answer arrives, so one stalled feed can't hold up the rest.
+`monitor/` holds the server-side code. The poller runs every 5 minutes, reading each feed in turn: the gauges, the storm overflows, the flood warnings, the weather warnings, the power cuts, the drought report, the bathing waters and the sea stations, then filling any gaps in the gauges' history. The feeds are independent, so a failure in one doesn't stop the others, and every request the poller makes gives up after two minutes, however slowly an answer arrives, so one stalled feed can't hold up the rest.
 
 ### Live readings
 
@@ -226,6 +231,10 @@ Once a day the poller lists the Environment Agency's flood areas within 110 km o
 ### Weather warnings
 
 Every 5 minutes the poller reads the Met Office's RSS feed of warnings for South West England, a few hundred bytes, which covers everywhere from Gloucestershire to the Isles of Scilly. Each item's description lists the local authorities it covers, separated by commas, and when it's in force, as in 'valid from 0300 Thu 22 Feb to 1400 Thu 22 Feb'. The poller keeps the warnings that name Cornwall or the Isles of Scilly and haven't ended, reads their times as UK clock time in the year the item was published, allowing for a warning that runs over the new year, and writes them to `site/data/weather.json`. The Met Office's terms allow the feed to be used for any purpose with attribution, provided its content and links are shown as supplied, so the page shows each title and description word for word.
+
+### Drought
+
+Every six hours the poller finds the Environment Agency's latest weekly drought report through GOV.UK's search and content APIs, which serve it as JSON. Each year's reports are a separate series with the year in its address, so the series is found by searching for its title, and the latest report in it by the dates in the reports' titles. The report's third section has a heading for each stage of drought response, with the Areas at that stage listed beneath it, and its second lists the water companies with a temporary use ban, the formal name for a hosepipe ban. The poller keeps, word for word, the entries that name Cornwall or the Isles of Scilly and South West Water's ban, and writes them with the report's title and link to `site/data/drought.json`. A report with no stage headings at all has changed its layout, so the poller keeps the last good status rather than reporting no drought.
 
 ### Power cuts
 
@@ -275,7 +284,7 @@ Railway ways are classified by line name, then by `usage` tag. Heritage and tour
 
 ## Tests
 
-`make test` runs both test suites, which use only Python's `unittest` and Node's built-in test runner, so there's nothing to install beyond Python 3.10 or later and Node 22 or later. The Python tests cover the poller and its order, the time limit on requests, the spill log, flood warnings, weather warnings, power cuts, forecasts, measured flow and the forecast's scaling ratio, bathing waters, the sea stations, geometry and the server's endpoints and headers; each runs against a temporary database, with the Environment Agency, the Met Office, NGED, South West Water, Open-Meteo, NRFA, NOAA and the Channel Coastal Observatory replaced by fixed responses, several of them trimmed copies of real ones in `tests/fixtures/`, so they need no network. The JavaScript tests load the page's scripts into a sandbox and check the chart arithmetic, the scaling of the flow forecast, the escaping, the tooltip text and the wording of power cut popups. GitHub Actions runs `make test` on every push to `main` and every pull request, on Python 3.10 and 3.13.
+`make test` runs both test suites, which use only Python's `unittest` and Node's built-in test runner, so there's nothing to install beyond Python 3.10 or later and Node 22 or later. The Python tests cover the poller and its order, the time limit on requests, the spill log, flood warnings, weather warnings, drought status, power cuts, forecasts, measured flow and the forecast's scaling ratio, bathing waters, the sea stations, geometry and the server's endpoints and headers; each runs against a temporary database, with the Environment Agency, GOV.UK, the Met Office, NGED, South West Water, Open-Meteo, NRFA, NOAA and the Channel Coastal Observatory replaced by fixed responses, several of them trimmed copies of real ones in `tests/fixtures/`, so they need no network. The JavaScript tests load the page's scripts into a sandbox and check the chart arithmetic, the scaling of the flow forecast, the escaping, the tooltip text, the wording of power cut popups and the drought pill. GitHub Actions runs `make test` on every push to `main` and every pull request, on Python 3.10 and 3.13.
 
 ## Project layout
 
@@ -286,6 +295,7 @@ monitor/ea.py             Environment Agency client: stations, latest readings, 
 monitor/live.py           writes site/data/live.json
 monitor/floods.py         Environment Agency flood warnings and alerts, and their areas
 monitor/weather.py        Met Office weather warnings for Cornwall
+monitor/drought.py        Environment Agency drought status and hosepipe bans for Cornwall
 monitor/powercuts.py      NGED's live power cuts in Cornwall
 monitor/overflows.py      South West Water storm overflows: list, spill log, annual totals
 monitor/bathing.py        Environment Agency bathing waters: classifications, forecasts, samples
@@ -305,6 +315,7 @@ site/js/map.js            basemap, boundary mask, overlays, markers, legend and 
 site/js/stations.js       gauge, overflow, bathing water and sea station popups and their charts
 site/js/floods.js         the flood warning banner and header indicator
 site/js/weather.js        the Met Office weather warning banner
+site/js/drought.js        the drought pill in the header and its panel
 site/js/powercuts.js      power cut tooltips and popups
 site/js/app.js            tab routing and the status line
 site/js/utils.js          escaping, formatting and the theme toggle
@@ -323,4 +334,4 @@ Bug reports, corrections and pull requests are welcome; [CONTRIBUTING.md](CONTRI
 
 The code is released under the [MIT licence](LICENSE).
 
-The map data is © OpenStreetMap contributors, available under the [Open Database Licence](https://www.openstreetmap.org/copyright). This uses Environment Agency flood and river level data from the real-time data API (Beta), available under the [Open Government Licence](https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/). Storm overflow activity is © South West Water, under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), and the overflow annual returns are © Environment Agency copyright and/or database right, under the Open Government Licence. Weather and river flow forecasts are from [Open-Meteo](https://open-meteo.com/), under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), with river flows generated using Copernicus Emergency Management Service information. Mean river flows are data from the UK National River Flow Archive. Measured river flows are Environment Agency data from the Hydrology API, under the Open Government Licence. Bathing water data are © Environment Agency, under the Open Government Licence. Power cut data is from National Grid Electricity Distribution, under the [NGED Open Data Licence](https://www.nationalgrid.co.uk/open-data-licence): Supported by NGED Open Data. Weather warnings are the Met Office's, and contain public sector information licensed under the Open Government Licence v3.0. Offshore observations are the Met Office's, as republished by NOAA's National Data Buoy Center. Real time data from the wave buoys and coastal weather stations are from the Regional Coastal Monitoring Programme, made freely available under the terms of the Open Government Licence; they are real-time data and are not quality-controlled. Basemap tiles are © [Esri](https://www.esri.com/). [Leaflet](https://leafletjs.com/) is released under the BSD 2-Clause licence.
+The map data is © OpenStreetMap contributors, available under the [Open Database Licence](https://www.openstreetmap.org/copyright). This uses Environment Agency flood and river level data from the real-time data API (Beta), available under the [Open Government Licence](https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/). Storm overflow activity is © South West Water, under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), and the overflow annual returns are © Environment Agency copyright and/or database right, under the Open Government Licence. Weather and river flow forecasts are from [Open-Meteo](https://open-meteo.com/), under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), with river flows generated using Copernicus Emergency Management Service information. Mean river flows are data from the UK National River Flow Archive. Measured river flows are Environment Agency data from the Hydrology API, under the Open Government Licence. Bathing water data are © Environment Agency, under the Open Government Licence. Power cut data is from National Grid Electricity Distribution, under the [NGED Open Data Licence](https://www.nationalgrid.co.uk/open-data-licence): Supported by NGED Open Data. Drought status is from the Environment Agency's weekly reports on GOV.UK, Crown copyright, under the Open Government Licence. Weather warnings are the Met Office's, and contain public sector information licensed under the Open Government Licence v3.0. Offshore observations are the Met Office's, as republished by NOAA's National Data Buoy Center. Real time data from the wave buoys and coastal weather stations are from the Regional Coastal Monitoring Programme, made freely available under the terms of the Open Government Licence; they are real-time data and are not quality-controlled. Basemap tiles are © [Esri](https://www.esri.com/). [Leaflet](https://leafletjs.com/) is released under the BSD 2-Clause licence.

@@ -21,7 +21,7 @@
   <meta name="twitter:image" content="https://cornwall.watch/img/og-image.png">
   <link rel="icon" type="image/svg+xml" href="img/favicon.svg?v=1">
   <link rel="stylesheet" href="lib/leaflet/leaflet.css?v=1.9.4">
-  <link rel="stylesheet" href="css/style.css?v=37">
+  <link rel="stylesheet" href="css/style.css?v=38">
   <script src="js/utils.js?v=2"></script>
 </head>
 <body>
@@ -34,6 +34,10 @@
     </nav>
     <div id="status" class="status-line"></div>
     <div class="header-buttons">
+      <div id="drought" class="drought" hidden>
+        <button type="button" class="drought-pill" aria-expanded="false" aria-controls="drought-details"><span class="drought-dot" aria-hidden="true"></span><span class="drought-pill-text"></span></button>
+        <div id="drought-details" class="drought-details" hidden></div>
+      </div>
       <span id="flood-pill" class="flood-pill" hidden aria-live="polite"><span class="flood-pill-dot"></span><span class="flood-pill-text"></span></span>
       <button id="theme-toggle" class="theme-toggle" aria-label="Toggle dark mode" title="Toggle dark mode"></button>
     </div>
@@ -79,6 +83,10 @@
           <dd>The Met Office's yellow, amber and red warnings of severe weather that name Cornwall or the Isles of
             Scilly, in a banner of the warning's colour while any are in force. Each one opens to show the Met
             Office's own description of it, and links to it on the Met Office site.</dd>
+          <dt>Drought</dt>
+          <dd>The Environment Agency's drought status for Cornwall from its weekly report, and South West Water's
+            hosepipe ban, in a pill in the header while either is in force. Opening it shows each stage as the
+            report words it, with a link to the report.</dd>
           <dt>Power cuts</dt>
           <dd>National Grid Electricity Distribution's power cuts in Cornwall, each with the customers off, the
             postcodes affected and when power is expected back on. To report a power cut, call 105.</dd>
@@ -113,6 +121,7 @@
           <tbody>
             <tr><td>Flood warnings and alerts</td><td>Environment Agency real-time flood-monitoring API, checked every 5 minutes, with flood area outlines from the same API</td><td><a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/" rel="noopener">Open Government Licence</a></td></tr>
             <tr><td>Weather warnings</td><td>Met Office <a href="https://weather.metoffice.gov.uk/warnings-and-advice/uk-warnings" rel="noopener">weather warnings</a> for South West England, from its RSS feed, checked every 5 minutes. Contains public sector information licensed under the Open Government Licence v3.0.</td><td><a href="https://www.metoffice.gov.uk/policies/tandc" rel="noopener">Met Office terms</a></td></tr>
+            <tr><td>Drought status and hosepipe bans</td><td>The Environment Agency's weekly <a href="https://www.gov.uk/government/publications/dry-weather-and-drought-in-england-2026-summary-reports" rel="noopener">Dry weather and drought in England</a> report, read through GOV.UK's content API every 6 hours</td><td><a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/" rel="noopener">Open Government Licence</a></td></tr>
             <tr><td>Power cuts</td><td>National Grid Electricity Distribution's <a href="https://connecteddata.nationalgrid.co.uk/dataset/live-power-cuts" rel="noopener">live power cuts</a>, checked every 5 minutes. Supported by NGED Open Data.</td><td><a href="https://www.nationalgrid.co.uk/open-data-licence" rel="noopener">NGED Open Data Licence</a></td></tr>
             <tr><td>River, tidal and rain gauges</td><td>Environment Agency real-time flood-monitoring API, checked every 5 minutes. This uses Environment Agency flood and river level data from the real-time data API (Beta).</td><td><a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/" rel="noopener">Open Government Licence</a></td></tr>
             <tr><td>Rain forecast</td><td><a href="https://open-meteo.com/" rel="noopener">Open-Meteo</a> weather forecast API, hourly rainfall for the next 48 hours at each rain gauge, fetched when a forecast is opened and kept for 15 minutes</td><td><a href="https://creativecommons.org/licenses/by/4.0/" rel="noopener">CC BY 4.0</a></td></tr>
@@ -165,6 +174,7 @@
 <script src="js/map.js?v=44"></script>
 <script src="js/floods.js?v=2"></script>
 <script src="js/weather.js?v=1"></script>
-<script src="js/app.js?v=9"></script>
+<script src="js/drought.js?v=1"></script>
+<script src="js/app.js?v=10"></script>
 </body>
 </html>

@@ -56,6 +56,10 @@
     --met-red: #c8322b;
     --power-bg: #2d2b28;
     --power-bolt: #f5c400;
+    /* Drought stages */
+    --drought-severe: #a8432a;
+    --drought: #c7782a;
+    --drought-dry: #b0912e;
     --station-fill: #ffffff;
     --hollow-fill: #fcf8ef;  /* hollow markers show the county's land colour */
     --mask: #d9d5cd;
@@ -111,6 +115,9 @@
         --met-red: #e0675c;
         --power-bg: #f5c400;
         --power-bolt: #1f1e1c;
+        --drought-severe: #e07a5f;
+        --drought: #e39a52;
+        --drought-dry: #d4b65a;
         --station-fill: #262522;
         --hollow-fill: #4d4b49;
         --mask: #0e0d0c;
@@ -165,6 +172,9 @@
     --met-red: #e0675c;
     --power-bg: #f5c400;
     --power-bolt: #1f1e1c;
+    --drought-severe: #e07a5f;
+    --drought: #e39a52;
+    --drought-dry: #d4b65a;
     --station-fill: #262522;
     --hollow-fill: #4d4b49;
     --mask: #0e0d0c;
@@ -673,6 +683,60 @@ footer { width: 100%; padding: 0 2rem 1.5rem; }
     /* The dot alone on phones */
     .flood-pill { padding: 0; width: 2.25rem; height: 2.25rem; justify-content: center; }
     .flood-pill-text { display: none; }
+}
+
+/* ---------- Drought ---------- */
+/* A pill in the header at the most severe stage, opening like a menu */
+.drought { position: relative; --tone: var(--drought); }
+.drought[hidden] { display: none; }
+.drought.is-severe { --tone: var(--drought-severe); }
+.drought.is-dry { --tone: var(--drought-dry); }
+.drought.is-recovery { --tone: var(--up); }
+.drought-pill {
+    display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.3rem 0.7rem 0.3rem 0.6rem;
+    border-radius: 999px; font: inherit; font-size: 0.78rem; white-space: nowrap; cursor: pointer;
+    color: var(--tone); background: color-mix(in srgb, var(--tone) 12%, var(--bg-card));
+    border: 1px solid color-mix(in srgb, var(--tone) 40%, transparent);
+}
+.drought-pill:hover { background: color-mix(in srgb, var(--tone) 20%, var(--bg-card)); }
+.drought-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.drought-details {
+    position: absolute; right: 0; top: calc(100% + 0.4rem); z-index: 1200;
+    width: min(24rem, calc(100vw - 2rem)); padding: 0.75rem 0.85rem;
+    background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14); font-size: 0.82rem; line-height: 1.45;
+}
+.drought-details[hidden] { display: none; }
+.drought-head { font-weight: 600; font-size: 0.9rem; margin-bottom: 0.5rem; }
+.drought-item { --tone: var(--drought); margin-bottom: 0.6rem; }
+.drought-item.is-severe { --tone: var(--drought-severe); }
+.drought-item.is-dry { --tone: var(--drought-dry); }
+.drought-item.is-recovery { --tone: var(--up); }
+.drought-item.is-ban { --tone: var(--text-secondary); }
+.drought-chip {
+    display: inline-block; font-size: 0.68rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;
+    padding: 0.1rem 0.45rem; border-radius: 4px; color: var(--text-on-dark); background: var(--tone);
+}
+.drought-text { margin-top: 0.25rem; }
+.drought-source { font-size: 0.72rem; color: var(--text-tertiary); }
+.drought-source a { color: var(--accent); text-decoration: none; }
+.drought-source a:hover { text-decoration: underline; }
+/* The header runs out of room before a phone's width, so the pills shrink to
+   their dots in turn: the drought pill first, then the flood one. */
+@media (max-width: 1000px) {
+    .drought-pill { padding: 0; width: 2.25rem; height: 2.25rem; justify-content: center; }
+    .drought-pill-text { display: none; }
+}
+@media (max-width: 760px) {
+    .flood-pill { padding: 0; width: 2.25rem; height: 2.25rem; justify-content: center; }
+    .flood-pill-text { display: none; }
+}
+@media (max-width: 640px) {
+    /* On a phone the title row has room for two buttons, so the drought dot
+       sits at the right of the tabs' row instead, and its panel opens from
+       the right-hand edge. */
+    .header-row { position: relative; }
+    .drought { position: absolute; right: 0; bottom: 0.2rem; }
 }
 
 /* ---------- Trend badges ---------- */

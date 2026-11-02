@@ -21,9 +21,9 @@ Monitoring Cornwall is a map with read-only live data. Visitors can't submit any
 - the `/api/stations/<id>/readings` and `/api/overflows/<id>` endpoints, which validate the ID against a fixed pattern, cap the history they return, and read the database through a query-only connection
 - the `/api/forecast/rain/<id>` and `/api/forecast/flow/<id>` endpoints, which validate the ID, answer only for known rain gauges and the fixed list of flow outlets, and send the server's own requests to Open-Meteo, the National River Flow Archive and the Environment Agency's Hydrology API, with results cached in memory
 - the `/api/bathing/<id>` and `/api/marine/<id>` endpoints, which answer only for bathing waters in the database and the fixed list of offshore stations; the first sends the server's own request to the Environment Agency, cached in memory, and the second reads the database
-- the poller, which reads gauge readings, flood warnings, flood area outlines and bathing waters from the Environment Agency's public APIs, weather warnings from the Met Office's RSS feed, power cuts from NGED's open data portal, overflow data from South West Water's public feeds, offshore observations from NOAA and coastal observations from the Channel Coastal Observatory, whose API key comes from the environment and is never committed, and writes to `data/monitor.db` and the JSON files in `site/data/`; it refuses an RSS feed that declares a DTD, and drops power cut rows with a malformed identifier or position, and postcodes that don't look like postcodes
+- the poller, which reads gauge readings, flood warnings, flood area outlines and bathing waters from the Environment Agency's public APIs, the weekly drought report from GOV.UK's search and content APIs, weather warnings from the Met Office's RSS feed, power cuts from NGED's open data portal, overflow data from South West Water's public feeds, offshore observations from NOAA and coastal observations from the Channel Coastal Observatory, whose API key comes from the environment and is never committed, and writes to `data/monitor.db` and the JSON files in `site/data/`; it refuses an RSS feed that declares a DTD, and drops power cut rows with a malformed identifier or position, and postcodes that don't look like postcodes
 - the Content Security Policy sent with every response, which allows scripts and data only from the site's own origin, images from that origin and the basemap tile server, and inline styles, which Leaflet uses to position the map
-- rendering of OpenStreetMap, Environment Agency, South West Water, Met Office and NGED text in the page, which is escaped or set as text before it reaches the DOM; links in Met Office warnings are followed only to the Met Office's own sites
+- rendering of OpenStreetMap, Environment Agency, South West Water, Met Office, GOV.UK and NGED text in the page, which is escaped or set as text before it reaches the DOM; links in Met Office warnings are followed only to the Met Office's own sites, and the drought report's link only to GOV.UK
 - `scripts/fetch_geodata.py`, which reads responses from the public Overpass API when the overlays are built
 - the Leaflet download in `make libs`, which is checked against the SHA-256 checksums in `libs.sha256`
 
@@ -35,7 +35,7 @@ Monitoring Cornwall is a map with read-only live data. Visitors can't submit any
 - South West Water's storm overflow feed and the annual returns dataset
 - Open-Meteo's forecast and flood APIs, and the National River Flow Archive's API
 - The Environment Agency's bathing water quality and Hydrology APIs, NOAA's National Data Buoy Center and the Channel Coastal Observatory's API
-- The Met Office's warnings feed and NGED's Connected Data portal
+- The Met Office's warnings feed, NGED's Connected Data portal and GOV.UK's APIs
 - Esri's basemap tile service
 - Vulnerabilities in Leaflet itself; report those to the [Leaflet project](https://github.com/Leaflet/Leaflet/security)
 - The configuration of any reverse proxy or server that someone runs this behind
