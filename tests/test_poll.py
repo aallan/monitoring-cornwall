@@ -56,9 +56,6 @@ class Cycle(QuietTestCase):
         self.assertEqual(order, ["gauges", "overflows", "floods", "bathing", "marine"])
 
 
-if __name__ == "__main__":
-    unittest.main()
-
 
 class Marine(DBTestCase):
     def test_polls_straight_away_when_no_stations_are_known(self):
@@ -85,3 +82,7 @@ class Marine(DBTestCase):
                 mock.patch.object(poll.marine, "write_summary"):
             poll.poll_marine(self.con)
         marine_poll.assert_not_called()
+
+
+if __name__ == "__main__":
+    unittest.main()

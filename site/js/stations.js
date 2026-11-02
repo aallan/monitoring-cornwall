@@ -634,7 +634,7 @@ const StationPopup = (() => {
   // The views a station's chart offers, for the fields it reports.
   const MARINE_VIEWS = [
     { field: 'wvht', label: 'Waves', caption: 'Significant wave height, in metres', fmt: v => `${one(v)} m`, zero: true },
-    { field: 'wspd', label: 'Wind', caption: 'Wind speed, hourly mean, in mph', conv: mph, fmt: v => `${Math.round(v)} mph`, zero: true },
+    { field: 'wspd', label: 'Wind', caption: 'Wind speed, in mph', conv: mph, fmt: v => `${Math.round(v)} mph`, zero: true },
     { field: 'wtmp', label: 'Sea temp', caption: 'Sea temperature, in °C', fmt: v => `${one(v)} °C` },
     { field: 'pres', label: 'Pressure', caption: 'Air pressure, in hPa', fmt: v => `${Math.round(v)} hPa` },
   ];
