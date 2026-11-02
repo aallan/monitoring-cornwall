@@ -3,7 +3,8 @@
 // Drought status in Cornwall, from the Environment Agency's weekly report: a
 // pill in the header at the most severe stage, which opens to show each
 // stage as the report words it, South West Water's hosepipe ban, and a link
-// to the report. A drought lasts months, so this stays out of the map's way.
+// to the report; or "No drought", which opens to say so. A drought lasts
+// months, so this stays out of the map's way.
 
 const Drought = (() => {
   // Checked as often as the other feeds: the file is small, and a page opened
@@ -33,48 +34,45 @@ const Drought = (() => {
     return split ? `${top} in parts` : top;
   }
 
+  function reportLink(d) {
+    return d.report && /^https:\/\/www\.gov\.uk\//.test(d.report.url || '')
+      ? { text: `Dry weather and drought in England: ${d.report.period}`, href: d.report.url } : null;
+  }
+
   function render(d) {
     const box = $('#drought');
     const top = worst(d.stages);
-    if (!top && !(d.bans || []).length) {
-      box.hidden = true;
-      return;
-    }
+    const bans = d.bans || [];
+    const clear = !top && !bans.length;
     const pill = $('.drought-pill', box);
-    box.className = `drought is-${CLASS[top] || 'ban'}`;
-    $('.drought-pill-text', pill).textContent = pillText(d.stages) || 'Hosepipe ban';
-    pill.title = top ? `${pillText(d.stages)} in Cornwall` : 'Hosepipe ban in force';
+    box.className = `drought pill-menu is-${clear ? 'clear' : CLASS[top] || 'ban'}`;
+    $('.drought-pill-text', pill).textContent = clear ? 'No drought' : pillText(d.stages) || 'Hosepipe ban';
+    pill.title = clear ? 'No part of Cornwall is in drought'
+      : top ? `${pillText(d.stages)} in Cornwall` : 'Hosepipe ban in force';
     box.hidden = false;
 
     const details = $('#drought-details');
-    details.textContent = '';
-    details.appendChild(el('div', 'drought-head', 'Drought in Cornwall'));
+    if (clear) {
+      PillMenus.fill(details, 'No drought in Cornwall', [
+        "The Environment Agency's latest weekly report doesn't put any part of Cornwall or the Isles of Scilly in " +
+        'prolonged dry weather or drought, and South West Water has no hosepipe ban in force.',
+      ], 'Environment Agency · ', reportLink(d));
+      return;
+    }
+    PillMenus.fill(details, 'Drought in Cornwall', [], 'Environment Agency · ', reportLink(d));
+    const source = details.lastChild;
     for (const s of d.stages || []) {
       const item = el('div', `drought-item is-${CLASS[s.stage] || 'drought'}`);
       item.appendChild(el('span', 'drought-chip', s.stage));
       item.appendChild(el('div', 'drought-text', s.text));
-      details.appendChild(item);
+      details.insertBefore(item, source);
     }
-    for (const b of d.bans || []) {
+    for (const b of bans) {
       const item = el('div', 'drought-item is-ban');
       item.appendChild(el('span', 'drought-chip', 'Hosepipe ban'));
       item.appendChild(el('div', 'drought-text', b));
-      details.appendChild(item);
+      details.insertBefore(item, source);
     }
-    const source = el('div', 'drought-source', 'Environment Agency, ');
-    if (d.report && /^https:\/\/www\.gov\.uk\//.test(d.report.url || '')) {
-      const a = el('a', null, `Dry weather and drought in England: ${d.report.period}`);
-      a.href = d.report.url;
-      a.target = '_blank';
-      a.rel = 'noopener';
-      source.appendChild(a);
-    }
-    details.appendChild(source);
-  }
-
-  function setOpen(open) {
-    $('#drought .drought-pill').setAttribute('aria-expanded', String(open));
-    $('#drought-details').hidden = !open;
   }
 
   function load() {
@@ -82,14 +80,7 @@ const Drought = (() => {
   }
 
   function init() {
-    const pill = $('#drought .drought-pill');
-    pill.addEventListener('click', e => {
-      e.stopPropagation();
-      setOpen(pill.getAttribute('aria-expanded') !== 'true');
-    });
-    // Closes like a menu: a click elsewhere, or Escape.
-    document.addEventListener('click', e => { if (!e.target.closest('#drought')) setOpen(false); });
-    document.addEventListener('keydown', e => { if (e.key === 'Escape') setOpen(false); });
+    PillMenus.add($('#drought'));
     load();
     setInterval(load, REFRESH_MS);
   }

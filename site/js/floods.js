@@ -7,7 +7,9 @@ const FloodWarnings = (() => {
   const REFRESH_MS = 5 * 60 * 1000;
   const TZ = 'Europe/London';
   const CLASS = { 1: 'severe', 2: 'warning', 3: 'alert' };
+  const CHECK_FOR_FLOODING = 'https://check-for-flooding.service.gov.uk/';
   let warnings = [];
+  let generated = null;
 
   const fmtWhen = ts => new Date(ts * 1000).toLocaleString('en-GB', {
     timeZone: TZ, weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
@@ -60,20 +62,33 @@ const FloodWarnings = (() => {
     return box;
   }
 
-  function render() {
+  // The pill in the header while nothing is in force, which opens to say so.
+  function renderClear() {
     const pill = $('#flood-pill');
+    pill.title = 'No Environment Agency flood warnings or alerts in force in Cornwall';
+    $('.flood-pill-text', pill).textContent = 'No flood warnings';
+    const checked = generated ? new Date(generated * 1000).toLocaleTimeString('en-GB', { timeZone: TZ, hour: '2-digit', minute: '2-digit' }) : null;
+    PillMenus.fill($('#flood-pill-panel'), 'No flood warnings in Cornwall', [
+      'The Environment Agency has no flood warnings or flood alerts in force in Cornwall or the Isles of Scilly.',
+      `If any are issued, a banner appears under the header and the areas are outlined on the map. ${checked ? `Last checked at ${checked}; ` : ''}checked every 5 minutes.`,
+    ], 'Environment Agency · ', { text: 'Check for flooding', href: CHECK_FOR_FLOODING });
+  }
+
+  function render() {
+    const status = $('#flood-status');
     const banner = $('#flood-banner');
     const details = $('#flood-details');
     // The banner changes the header's height, and so the map's.
     if (banner.hidden !== !warnings.length) setTimeout(() => CornwallMap.resize(), 0);
     if (!warnings.length) {
       banner.hidden = true;
-      pill.hidden = false;
-      pill.title = 'No Environment Agency flood warnings or alerts in force in Cornwall';
-      $('.flood-pill-text', pill).textContent = 'No flood warnings';
+      status.hidden = false;
+      renderClear();
       return;
     }
-    pill.hidden = true;
+    status.hidden = true;
+    $('#flood-pill').setAttribute('aria-expanded', 'false');
+    $('#flood-pill-panel').hidden = true;
     const worst = Math.min(...warnings.map(w => w.severity));
     banner.className = `flood-banner is-${CLASS[worst]}`;
     banner.hidden = false;
@@ -86,6 +101,7 @@ const FloodWarnings = (() => {
     return getJSON('data/warnings.json')
       .then(d => {
         warnings = d.warnings || [];
+        generated = d.generated || null;
         render();
         CornwallMap.setFloodWarnings(warnings);
       })
@@ -93,6 +109,7 @@ const FloodWarnings = (() => {
   }
 
   function init() {
+    PillMenus.add($('#flood-status'));
     const summary = $('#flood-banner .flood-summary');
     summary.addEventListener('click', () => {
       const open = summary.getAttribute('aria-expanded') !== 'true';

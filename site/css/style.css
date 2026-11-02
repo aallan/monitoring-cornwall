@@ -609,13 +609,13 @@ footer { width: 100%; padding: 0 2rem 1.5rem; }
 .cso-year-bar { fill: var(--cso-recent); }
 
 /* ---------- Flood warnings ---------- */
-/* Quiet indicator in the header when nothing is in force */
+/* Quiet indicator in the header when nothing is in force, which opens to say so */
 .flood-pill {
     display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.3rem 0.7rem 0.3rem 0.6rem;
-    border-radius: 999px; font-size: 0.78rem; color: var(--up); background: var(--up-light);
-    border: 1px solid rgba(90, 158, 111, 0.3); white-space: nowrap;
+    border-radius: 999px; font: inherit; font-size: 0.78rem; color: var(--up); background: var(--up-light);
+    border: 1px solid rgba(90, 158, 111, 0.3); white-space: nowrap; cursor: pointer;
 }
-.flood-pill[hidden] { display: none; }
+.flood-pill:hover { background: color-mix(in srgb, var(--up) 22%, var(--bg-card)); }
 .flood-pill-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
 
 /* Banner under the header while any warning or alert is in force */
@@ -685,10 +685,27 @@ footer { width: 100%; padding: 0 2rem 1.5rem; }
     .flood-pill-text { display: none; }
 }
 
+/* ---------- Header pills ---------- */
+/* A pill in the header that opens a panel below it, like a menu (PillMenus in utils.js) */
+.pill-menu { position: relative; }
+.pill-menu[hidden] { display: none; }
+.pill-panel {
+    position: absolute; right: 0; top: calc(100% + 0.4rem); z-index: 1200;
+    width: min(24rem, calc(100vw - 2rem)); padding: 0.75rem 0.85rem;
+    background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14); font-size: 0.82rem; line-height: 1.45; color: var(--text);
+}
+.pill-panel[hidden] { display: none; }
+.pill-panel-head { font-weight: 600; font-size: 0.9rem; margin-bottom: 0.5rem; }
+.pill-panel-text { margin: 0 0 0.6rem; }
+.pill-panel-source { font-size: 0.72rem; color: var(--text-tertiary); }
+.pill-panel-source a { color: var(--accent); text-decoration: none; }
+.pill-panel-source a:hover { text-decoration: underline; }
+
 /* ---------- Drought ---------- */
-/* A pill in the header at the most severe stage, opening like a menu */
-.drought { position: relative; --tone: var(--drought); }
-.drought[hidden] { display: none; }
+/* The drought pill at the most severe stage, or green when there's none */
+.drought { --tone: var(--drought); }
+.drought.is-clear { --tone: var(--up); }
 .drought.is-severe { --tone: var(--drought-severe); }
 .drought.is-dry { --tone: var(--drought-dry); }
 .drought.is-recovery { --tone: var(--up); }
@@ -700,14 +717,6 @@ footer { width: 100%; padding: 0 2rem 1.5rem; }
 }
 .drought-pill:hover { background: color-mix(in srgb, var(--tone) 20%, var(--bg-card)); }
 .drought-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
-.drought-details {
-    position: absolute; right: 0; top: calc(100% + 0.4rem); z-index: 1200;
-    width: min(24rem, calc(100vw - 2rem)); padding: 0.75rem 0.85rem;
-    background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14); font-size: 0.82rem; line-height: 1.45;
-}
-.drought-details[hidden] { display: none; }
-.drought-head { font-weight: 600; font-size: 0.9rem; margin-bottom: 0.5rem; }
 .drought-item { --tone: var(--drought); margin-bottom: 0.6rem; }
 .drought-item.is-severe { --tone: var(--drought-severe); }
 .drought-item.is-dry { --tone: var(--drought-dry); }
@@ -718,9 +727,6 @@ footer { width: 100%; padding: 0 2rem 1.5rem; }
     padding: 0.1rem 0.45rem; border-radius: 4px; color: var(--text-on-dark); background: var(--tone);
 }
 .drought-text { margin-top: 0.25rem; }
-.drought-source { font-size: 0.72rem; color: var(--text-tertiary); }
-.drought-source a { color: var(--accent); text-decoration: none; }
-.drought-source a:hover { text-decoration: underline; }
 /* The header runs out of room before a phone's width, so the pills shrink to
    their dots in turn: the drought pill first, then the flood one. */
 @media (max-width: 1000px) {
@@ -733,14 +739,14 @@ footer { width: 100%; padding: 0 2rem 1.5rem; }
 }
 @media (max-width: 640px) {
     /* On a phone the title and up to three round buttons share one row, a
-       little smaller than on wider screens. The drought panel opens from the
+       little smaller than on wider screens. The pills' panels open from the
        header's right-hand edge, across the width of the screen. */
     header h1 { font-size: 1rem; gap: 0.4rem; }
     header h1 .ticker { font-size: 0.62rem; padding: 0.1rem 0.35rem; }
     .header-row { position: relative; column-gap: 0.5rem; }
     .header-buttons { gap: 0.3rem; }
     .header-buttons .theme-toggle, .flood-pill, .drought-pill { width: 2rem; height: 2rem; font-size: 1rem; }
-    .drought { position: static; }
+    .pill-menu { position: static; }
 }
 @media (max-width: 380px) {
     /* The smallest phones need a little more room for the same row */
