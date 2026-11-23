@@ -169,3 +169,13 @@ test("the forecast's falling flow is scaled, and a rise from rain added at the m
   ]);
   assert.equal(scaleForecast(days, 1, now), days);
 });
+
+test('a rise on the first forecast day is added at the model\'s size', () => {
+  const { scaleForecast } = StationPopup._internals;
+  const d = n => utc(2026, 10, 1) + n * 86400;
+  const days = [[d(0), 2, 2, 2], [d(1), 3, 2, 40]];
+  assert.deepEqual(plain(scaleForecast(days, 6, d(1) + 3600)), [
+    [d(0), 2, 2, 2],
+    [d(1), 13, 12, 50],                  // lowest is yesterday's 2: 12, plus the rise
+  ]);
+});

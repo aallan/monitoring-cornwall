@@ -324,17 +324,20 @@ const StationPopup = (() => {
   // past days stay as they are. The model's error is mostly in the river's
   // falling flow between storms, where measured over modelled flow holds
   // steady from day to day, while it gets the size of a rise from rain about
-  // right. So each series' lowest point so far, from today, is multiplied by
-  // k, and anything above it, a rise from rain, is added at the model's size.
+  // right. So each series' lowest point so far, counting from the last past
+  // day, is multiplied by k, and anything above it, a rise from rain, is
+  // added at the model's size; a rise that starts today is a rise too.
   function scaleForecast(days, k, now) {
     if (k === 1) return days;
     const base = [null, null, null, null];
+    let last = null;
     return days.map(r => {
-      if (r[0] + 86400 <= now) return r;
+      if (r[0] + 86400 <= now) { last = r; return r; }
       const out = [r[0]];
       for (let i = 1; i <= 3; i++) {
         if (r[i] == null) { out.push(r[i]); continue; }
-        base[i] = base[i] == null ? r[i] : Math.min(base[i], r[i]);
+        const start = base[i] ?? (last && last[i] != null ? last[i] : r[i]);
+        base[i] = Math.min(start, r[i]);
         out.push(k * base[i] + (r[i] - base[i]));
       }
       return out;
